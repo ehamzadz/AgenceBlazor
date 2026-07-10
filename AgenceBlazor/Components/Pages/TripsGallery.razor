@@ -235,8 +235,6 @@
                                 </div>
                             </div>
                             <div class="action-buttons">
-
-                                <!-- Guide Button -->
                                 <!-- Guide Button -->
                                 <button class="action-btn guide-btn @(tripGuides.ContainsKey(trip.Id) ? "has-guide" : "")"
                                         title="@(tripGuides.ContainsKey(trip.Id) ? "تعديل المرشد" : "إدارة المرشد")"
@@ -1182,8 +1180,6 @@
 }
 
 
-
-
 <!-- Add Hotel Modal -->
 @if (showHotelModal && hotelTrip != null)
 {
@@ -1261,8 +1257,6 @@
         </div>
     </div>
 }
-
-
 
 
 <!-- Direct Pilgrim Booking Modal -->
@@ -2253,7 +2247,6 @@
 
             await DirectPilgrimService.CreateAsync(pilgrim);
 
-            // Get or create local agency
             // Get or create local agency - FIXED
             var localAgency = agenciesList.FirstOrDefault(a =>
                 a.AgencyName == "الوكالة المحلية" && a.AgencyType == "مكتب");
@@ -2291,6 +2284,30 @@
             // Create agency booking linked to local agency
             if (agencyId.HasValue)
             {
+                // var booking = new AgencyBooking
+                // {
+                //     TripId = directBookingTrip.Id,
+                //     AgencyId = agencyId.Value,
+                //     AgencyName = "الوكالة المحلية",
+                //     HotelName = selectedDirectHotel,
+                //     GroupCount = roomCounts["جماعي"],
+                //     QuadrupleCount = roomCounts["رباعي"],
+                //     TripleCount = roomCounts["ثلاثي"],
+                //     DoubleCount = roomCounts["ثنائي"],
+                //     ChildCount = roomCounts["طفل"],
+                //     InfantCount = roomCounts["رضيع"],
+                //     GroupPrice = directPrices.GroupPrice,
+                //     QuadruplePrice = directPrices.QuadruplePrice,
+                //     TriplePrice = directPrices.TriplePrice,
+                //     DoublePrice = directPrices.DoublePrice,
+                //     ChildPrice = directPrices.ChildPrice,
+                //     InfantPrice = directPrices.InfantPrice,
+                //     TotalAmount = totalAmount,
+                //     Commission = 0,
+                //     Reduction = directDiscount,
+                //     Status = "confirmed"
+                // };
+
                 var booking = new AgencyBooking
                 {
                     TripId = directBookingTrip.Id,
@@ -2309,9 +2326,9 @@
                     DoublePrice = directPrices.DoublePrice,
                     ChildPrice = directPrices.ChildPrice,
                     InfantPrice = directPrices.InfantPrice,
-                    TotalAmount = totalAmount,
+                    TotalAmount = netAmount,        // Same as DirectPilgrim.TotalAmount
                     Commission = 0,
-                    Reduction = directDiscount,
+                    Reduction = directDiscount,       // Same as DirectPilgrim.Discount
                     Status = "confirmed"
                 };
 
@@ -2323,6 +2340,7 @@
             directBookingTrip = null;
             await Task.Delay(300);
             await LoadTripsAsync();
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -2402,28 +2420,39 @@
     
     private async Task OpenGuideModal(Trip trip)
     {
-        Console.WriteLine("Button clicked!");
         guideTrip = trip;
         guideError = "";
         await LoadGuideForTrip(trip.Id);
         showGuideModal = true;
+
+        // Updating UI
         StateHasChanged();
     }
 
     private async Task LoadGuideForTrip(int tripId)
     {
-        existingGuide = await TripGuideService.GetGuideByTripIdAsync(tripId);
-        if (existingGuide != null)
+        try
         {
-            guideName = existingGuide.Name;
-            guideAgency = existingGuide.Agency;
-            guideGrantAmount = existingGuide.GrantAmount;
+            existingGuide = await TripGuideService.GetGuideByTripIdAsync(tripId);
+            if (existingGuide != null)
+            {
+                guideName = existingGuide.Name;
+                guideAgency = existingGuide.Agency;
+                guideGrantAmount = existingGuide.GrantAmount;
+                Console.WriteLine($"Loaded guide for trip {tripId}: {guideName}, {guideAgency}, {guideGrantAmount}");
+            }
+            else
+            {
+                guideName = "";
+                guideAgency = "";
+                guideGrantAmount = 0;
+                Console.WriteLine($"No guide found for trip {tripId}");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            guideName = "";
-            guideAgency = "";
-            guideGrantAmount = 0;
+            Console.WriteLine($"Error loading guide for trip {tripId}: {ex.Message}");
+            guideError = "حدث خطأ أثناء تحميل بيانات المرشد";
         }
     }
 
@@ -2449,19 +2478,19 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(guideName))
-        {
-            guideError = "⚠️ الرجاء إدخال اسم المرشد";
-            ShowToast(false, "الرجاء إدخال اسم المرشد");
-            return;
-        }
+        // if (string.IsNullOrWhiteSpace(guideName))
+        // {
+        //     guideError = "⚠️ الرجاء إدخال اسم المرشد";
+        //     ShowToast(false, "الرجاء إدخال اسم المرشد");
+        //     return;
+        // }
 
-        if (guideTrip == null)
-        {
-            guideError = "⚠️ لم يتم تحديد الرحلة";
-            ShowToast(false, "لم يتم تحديد الرحلة");
-            return;
-        }
+        // if (guideTrip == null)
+        // {
+        //     guideError = "⚠️ لم يتم تحديد الرحلة";
+        //     ShowToast(false, "لم يتم تحديد الرحلة");
+        //     return;
+        // }
 
         try
         {
@@ -2661,88 +2690,81 @@
     // [Inject]
     // protected IJSRuntime JSRuntime { get; set; }
 
-    private string testMessage = "لم يتم الضغط بعد";
+    // private string testMessage = "لم يتم الضغط بعد";
 
-    private void TestButtonClick()
-    {
-        Console.WriteLine("✅✅✅ الزر يعمل! ✅✅✅");
-        testMessage = "✅ تم الضغط على الزر بنجاح في: " + DateTime.Now.ToString("HH:mm:ss");
-        ShowToast(true, "الزر يعمل!");
-        StateHasChanged();
-    }
 
-    private async Task TestGuideSaveButton()
-    {
-        Console.WriteLine("=== اختبار زر حفظ المرشد ===");
-        testMessage = "جاري الاختبار...";
-        StateHasChanged();
+    // private async Task TestGuideSaveButton()
+    // {
+    //     Console.WriteLine("=== اختبار زر حفظ المرشد ===");
+    //     testMessage = "جاري الاختبار...";
+    //     StateHasChanged();
 
-        try
-        {
-            if (TripGuideService == null)
-            {
-                Console.WriteLine("❌ TripGuideService is NULL");
-                testMessage = "❌ خدمة المرشدين غير متاحة (TripGuideService is null)";
-                ShowToast(false, "خدمة المرشدين غير متاحة");
-                StateHasChanged();
-                return;
-            }
+    //     try
+    //     {
+    //         if (TripGuideService == null)
+    //         {
+    //             Console.WriteLine("❌ TripGuideService is NULL");
+    //             testMessage = "❌ خدمة المرشدين غير متاحة (TripGuideService is null)";
+    //             ShowToast(false, "خدمة المرشدين غير متاحة");
+    //             StateHasChanged();
+    //             return;
+    //         }
 
-            if (!allTrips.Any())
-            {
-                Console.WriteLine("❌ No trips available");
-                testMessage = "❌ لا توجد رحلات";
-                ShowToast(false, "لا توجد رحلات");
-                StateHasChanged();
-                return;
-            }
+    //         if (!allTrips.Any())
+    //         {
+    //             Console.WriteLine("❌ No trips available");
+    //             testMessage = "❌ لا توجد رحلات";
+    //             ShowToast(false, "لا توجد رحلات");
+    //             StateHasChanged();
+    //             return;
+    //         }
 
-            var trip = allTrips.First();
-            Console.WriteLine($"Testing with Trip ID: {trip.Id}, Number: {trip.TripNumber}");
+    //         var trip = allTrips.First();
+    //         Console.WriteLine($"Testing with Trip ID: {trip.Id}, Number: {trip.TripNumber}");
 
-            var guide = new TripGuide
-            {
-                TripId = trip.Id,
-                Name = "مرشد اختبار " + DateTime.Now.ToString("HHmmss"),
-                Agency = "وكالة الاختبار",
-                GrantAmount = 50000
-            };
+    //         var guide = new TripGuide
+    //         {
+    //             TripId = trip.Id,
+    //             Name = "مرشد اختبار " + DateTime.Now.ToString("HHmmss"),
+    //             Agency = "وكالة الاختبار",
+    //             GrantAmount = 50000
+    //         };
 
-            Console.WriteLine($"Calling CreateOrUpdateGuideAsync...");
-            var result = await TripGuideService.CreateOrUpdateGuideAsync(guide);
+    //         Console.WriteLine($"Calling CreateOrUpdateGuideAsync...");
+    //         var result = await TripGuideService.CreateOrUpdateGuideAsync(guide);
 
-            if (result != null)
-            {
-                Console.WriteLine($"✅ SUCCESS! Guide ID: {result.Id}");
-                testMessage = $"✅ تم حفظ المرشد بنجاح! ID: {result.Id}";
-                tripGuides[trip.Id] = result;
-                ShowToast(true, "تم حفظ المرشد بنجاح");
-            }
-            else
-            {
-                Console.WriteLine("❌ Result is NULL");
-                testMessage = "❌ فشل الحفظ - النتيجة فارغة";
-                ShowToast(false, "فشل الحفظ");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Exception: {ex.Message}");
-            Console.WriteLine($"Stack: {ex.StackTrace}");
-            testMessage = $"❌ خطأ: {ex.Message}";
-            ShowToast(false, $"خطأ: {ex.Message}");
-        }
-        finally
-        {
-            StateHasChanged();
-        }
-    }
+    //         if (result != null)
+    //         {
+    //             Console.WriteLine($"✅ SUCCESS! Guide ID: {result.Id}");
+    //             testMessage = $"✅ تم حفظ المرشد بنجاح! ID: {result.Id}";
+    //             tripGuides[trip.Id] = result;
+    //             ShowToast(true, "تم حفظ المرشد بنجاح");
+    //         }
+    //         else
+    //         {
+    //             Console.WriteLine("❌ Result is NULL");
+    //             testMessage = "❌ فشل الحفظ - النتيجة فارغة";
+    //             ShowToast(false, "فشل الحفظ");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"❌ Exception: {ex.Message}");
+    //         Console.WriteLine($"Stack: {ex.StackTrace}");
+    //         testMessage = $"❌ خطأ: {ex.Message}";
+    //         ShowToast(false, $"خطأ: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         StateHasChanged();
+    //     }
+    // }
 
-    private void TestOpenGuideModal(Trip trip)
-    {
-        Console.WriteLine($"TestOpenGuideModal called for Trip: {trip.Id}");
-        testMessage = $"تم فتح نافذة المرشد للرحلة: {trip.TripNumber}";
-        ShowToast(true, "تم استدعاء الدالة");
-        StateHasChanged();
-    }
+    // private void TestOpenGuideModal(Trip trip)
+    // {
+    //     Console.WriteLine($"TestOpenGuideModal called for Trip: {trip.Id}");
+    //     testMessage = $"تم فتح نافذة المرشد للرحلة: {trip.TripNumber}";
+    //     ShowToast(true, "تم استدعاء الدالة");
+    //     StateHasChanged();
+    // }
 }
