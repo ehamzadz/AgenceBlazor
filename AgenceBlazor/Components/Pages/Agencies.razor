@@ -1,0 +1,797 @@
+﻿@page "/agencies"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject AgencyService AgencyService
+@inject PaymentService PaymentService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject TreasuryService TreasuryService
+
+<div class="agencies-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">الوكالات</h1>
+                <p class="page-subtitle">إدارة الوكالات وعقود السفر</p>
+            </div>
+        </div>
+        @* <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Count</span>
+                <span class="stat-label">وكالة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Count(a => a.Status == "Active")</span>
+                <span class="stat-label">نشطة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Sum(a => a.RemainingAmount).ToString("N0")</span>
+                <span class="stat-label">الديون</span>
+            </div>
+        </div> *@
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Count</span>
+                <span class="stat-label">وكالة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Count(a => a.Status == "Active")</span>
+                <span class="stat-label">نشطة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Sum(a => a.PaidAmount).ToString("N0")</span>
+                <span class="stat-label">المدفوع</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@agencies.Sum(a => a.RemainingAmount).ToString("N0")</span>
+                <span class="stat-label">المتبقي</span>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>جاري تحميل الوكالات...</p>
+        </div>
+    }
+    else if (agencies.Any())
+    {
+        <div class="agencies-list">
+            @foreach (var agency in agencies)
+            {
+                <div class="agency-card">
+                    <div class="card-status @(agency.Status == "Active" ? "active" : "inactive")"></div>
+                    <div class="card-body">
+                        <!-- Agency Identity -->
+                        <div class="agency-identity">
+                            <div class="agency-avatar">
+                                @(agency.AgencyName?.Length >= 2 ? agency.AgencyName.Substring(0, 2) : "وك")
+                            </div>
+                            <div class="agency-info">
+                                <h3 class="agency-name">@agency.AgencyName</h3>
+                                <span class="agency-address">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    @agency.City
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Score -->
+                        @{
+                            var maxPilgrims = agencies.Any() ? (double)agencies.Max(a => a.PilgrimsCount) : 1.0;
+
+                            // Pilgrims score (50%)
+                            var pilgrimsScore = maxPilgrims > 0 ? ((double)agency.PilgrimsCount / maxPilgrims) * 50.0 : 0;
+
+                            // Debt score (50%) - lower remaining debt = higher score
+                            var totalAmount = (double)(agency.DebtAmount + agency.PaidAmount);
+                            var debtScore = totalAmount > 0 ? (1.0 - ((double)agency.RemainingAmount / totalAmount)) * 50.0 : 50.0;
+
+                            var score = (int)(pilgrimsScore + debtScore);
+                            if (score > 100) score = 100;
+                            if (score < 0) score = 0;
+
+                            var color = score >= 80 ? "#43a047" : score >= 60 ? "#ffa726" : "#ef5350";
+                        }
+                        <div class="agency-score">
+                            <div class="score-ring">
+                                <svg width="40" height="40" viewBox="0 0 40 40">
+                                    <circle cx="20" cy="20" r="17" fill="none" stroke="#e8ece8" stroke-width="2.5" />
+                                    <circle cx="20" cy="20" r="17" fill="none"
+                                            stroke="@color"
+                                            stroke-width="2.5"
+                                            stroke-dasharray="106.8"
+                                            stroke-dashoffset="@(106.8 - (106.8 * score / 100))"
+                                            stroke-linecap="round"
+                                            transform="rotate(-90 20 20)" />
+                                </svg>
+                                <span class="score-text" style="color: @color">@score</span>
+                            </div>
+                        </div>
+
+                        <!-- Details Chips -->
+                        <div class="details-chips">
+                            <div class="detail-chip">
+                                <span class="chip-label">النوع</span>
+                                <span class="chip-value">@agency.AgencyType</span>
+                            </div>
+                            <div class="detail-chip">
+                                <span class="chip-label">الحالة</span>
+                                <span class="chip-value status-text @(agency.Status == "Active" ? "active" : "inactive")">
+                                    @(agency.Status == "Active" ? "نشطة" : "متوقفة")
+                                </span>
+                            </div>
+                            <div class="detail-chip">
+                                <span class="chip-label">العمولة</span>
+                                <span class="chip-value">@agency.CommissionRate%</span>
+                            </div>
+                            <div class="detail-chip">
+                                <span class="chip-label">العقد</span>
+                                <span class="chip-value">@(agency.ContractDate?.ToString("dd/MM/yyyy") ?? "-")</span>
+                            </div>
+                            <div class="detail-chip">
+                                <span class="chip-label">عدد المعتمرين</span>
+                                <span class="chip-value">@agency.PilgrimsCount</span>
+                            </div>
+                        </div>
+
+                        <!-- Financial Summary -->
+                        <div class="financial-summary">
+                            <div class="financial-item">
+                                <div class="financial-icon debt">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
+                                </div>
+                                <div class="financial-details">
+                                    <span class="financial-label">الديون</span>
+                                    <span class="financial-amount debt">@agency.DebtAmount.ToString("N0")</span>
+                                </div>
+                            </div>
+                            <div class="financial-item">
+                                <div class="financial-icon reduction">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </div>
+                                <div class="financial-details">
+                                    <span class="financial-label">تخفيضات</span>
+                                    <span class="financial-amount reduction">
+                                        @(agencyReductions.ContainsKey(agency.AgencyId) ? agencyReductions[agency.AgencyId].ToString("N0") : "0")
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="financial-item">
+                                <div class="financial-icon paid">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="financial-details">
+                                    <span class="financial-label">مدفوع</span>
+                                    <span class="financial-amount paid">@agency.PaidAmount.ToString("N0")</span>
+                                </div>
+                            </div>
+                            <div class="financial-item">
+                                <div class="financial-icon remaining">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="financial-details">
+                                    <span class="financial-label">متبقي</span>
+                                    <span class="financial-amount remaining @(agency.RemainingAmount > 5000 ? "urgent" : "")">
+                                        @agency.RemainingAmount.ToString("N0")
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Actions -->
+                        <div class="agency-actions">
+                            <button class="agency-action-btn payment" title="تسديد" @onclick="() => AddPayment(agency)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                                <span>تسديد</span>
+                            </button>
+                            @* <button class="agency-action-btn bookings" title="الحجوزات" @onclick="() => ViewBookings(agency)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <line x1="3" y1="9" x2="21" y2="9" />
+                                    <line x1="9" y1="21" x2="9" y2="9" />
+                                </svg>
+                                <span>الحجوزات</span>
+                            </button>
+                            <button class="agency-action-btn edit" title="تعديل" @onclick="() => EditAgency(agency)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                <span>تعديل</span>
+                            </button>
+                            <button class="agency-action-btn details" title="تفاصيل" @onclick="() => ShowAgencyDetails(agency)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                                <span>تفاصيل</span>
+                            </button> *@
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-results">
+            <h3>لا توجد وكالات</h3>
+            <p>لم يتم العثور على أي وكالات</p>
+        </div>
+    }
+</div>
+
+@if (showToast)
+{
+    <div class="toast @(toastSuccess ? "toast-success" : "toast-error")">
+        <div class="toast-icon">
+            @if (toastSuccess)
+            {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+            }
+            else
+            {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+            }
+        </div>
+        <span class="toast-message">@toastMessage</span>
+        <button class="toast-close" @onclick="() => showToast = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+    </div>
+}
+
+<!-- Payment Modal -->
+@if (showPaymentModal && paymentAgency != null)
+{
+    <div class="pmt-overlay" @onclick="CancelPayment">
+        <div class="pmt-card" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="pmt-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 0.5rem; border-radius: 10px; display: flex; align-items: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="pmt-title" style="color:white;">تسديد دفعة</h3>
+                </div>
+                <button class="pmt-close" @onclick="CancelPayment" disabled="@isSavingPayment">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div class="pmt-body">
+                <!-- Agency Info -->
+                <div class="pmt-agency-info">
+                    <div class="pmt-agency-avatar">@(paymentAgency.AgencyName?.Length >= 2 ? paymentAgency.AgencyName.Substring(0, 2) : "وك")</div>
+                    <div>
+                        <div class="pmt-agency-name">@paymentAgency.AgencyName</div>
+                        <div class="pmt-agency-city">@paymentAgency.City</div>
+                    </div>
+                </div>
+
+                <!-- Financial Summary -->
+                <div class="pmt-summary">
+                    <div class="pmt-summary-row">
+                        <span>إجمالي الديون</span>
+                        <span class="pmt-summary-val debt">@paymentAgency.DebtAmount.ToString("N0") دج</span>
+                    </div>
+                    <div class="pmt-summary-row">
+                        <span>إجمالي المدفوع</span>
+                        <span class="pmt-summary-val paid">@paymentAgency.PaidAmount.ToString("N0") دج</span>
+                    </div>
+                    <div class="pmt-summary-row remaining">
+                        <span>المبلغ المتبقي</span>
+                        <span class="pmt-summary-val">@paymentAgency.RemainingAmount.ToString("N0") دج</span>
+                    </div>
+                </div>
+
+                <!-- Payment Amount -->
+                <div class="pmt-field">
+                    <label class="pmt-label">المبلغ المدفوع (دج)</label>
+                    <input type="number" class="pmt-input" @bind="paymentAmount" step="1000" min="0"
+                           placeholder="أدخل المبلغ" />
+                </div>
+
+                <!-- Payment Method -->
+                <div class="pmt-field">
+                    <label class="pmt-label">طريقة الدفع</label>
+                    <div class="pmt-btns">
+                        @{
+                            var paymentMethods = new[] { "نقداً", "شيك", "تحويل بنكي", "بريد" };
+                        }
+                        @foreach (var method in paymentMethods)
+                        {
+                            <button class="pmt-btn @(selectedPaymentMethod == method ? "active" : "")"
+                                    @onclick="() => selectedPaymentMethod = method">
+                                @method
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- New remaining after payment -->
+                @{
+                    var newRemaining = paymentAgency.RemainingAmount - paymentAmount;
+                    if (newRemaining < 0) newRemaining = 0;
+                }
+                <div class="pmt-new-remaining @(newRemaining == 0 ? "cleared" : "")">
+                    <span>المتبقي بعد الدفع</span>
+                    <span>@newRemaining.ToString("N0") دج</span>
+                </div>
+
+                <!-- Notes -->
+                <div class="pmt-field">
+                    <label class="pmt-label">ملاحظات</label>
+                    <input type="text" class="pmt-input" @bind="paymentNotes" placeholder="ملاحظات (اختياري)" />
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pmt-footer">
+                <button class="pmt-btn-cancel" @onclick="CancelPayment" disabled="@isSavingPayment">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>إلغاء</span>
+                </button>
+                <button class="pmt-btn-save" @onclick="SavePayment"
+                        disabled="@(isSavingPayment || paymentAmount <= 0)">
+                    @if (isSavingPayment)
+                    {
+                        <span class="pmt-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>تأكيد الدفع</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<Agency> agencies = new List<Agency>();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAgenciesAsync();
+    }
+
+    // private async Task LoadAgenciesAsync()
+    // {
+    //     try
+    //     {
+    //         isLoading = true;
+    //         agencies = await AgencyService.GetAllAgenciesAdminAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Error loading agencies: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+    private Dictionary<Guid, decimal> agencyReductions = new();
+
+    private async Task LoadAgenciesAsync()
+    {
+        try
+        {
+            isLoading = true;
+            agencies = await AgencyService.GetAllAgenciesAdminAsync();
+            agencyReductions = await AgencyService.GetReductionsByAgencyAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading agencies: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAgencyDetails(Agency agency)
+    {
+        // TODO: Navigate to agency details page or show modal
+        Console.WriteLine($"Show details for: {agency.AgencyName}");
+    }
+
+    private void ViewBookings(Agency agency)
+    {
+        // TODO: Navigate to bookings page filtered by this agency
+        Console.WriteLine($"View bookings for agency: {agency.AgencyName}");
+    }
+
+    private void EditAgency(Agency agency)
+    {
+        // TODO: Open edit modal
+        Console.WriteLine($"Edit agency: {agency.AgencyName}");
+    }
+
+    // Payment Modal
+    private bool showPaymentModal = false;
+    private Agency paymentAgency = null;
+    private bool isSavingPayment = false;
+    private string selectedPaymentMethod = "نقداً";
+    private string paymentNotes = "";
+    private decimal paymentAmount = 10000; // Default value instead of 0
+
+    private void AddPayment(Agency agency)
+    {
+        paymentAgency = agency;
+        paymentAmount = agency.RemainingAmount; // Default to full remaining
+        selectedPaymentMethod = "نقداً";
+        paymentNotes = "";
+        showPaymentModal = true;
+    }
+
+    private void CancelPayment()
+    {
+        if (!isSavingPayment)
+        {
+            showPaymentModal = false;
+            paymentAgency = null;
+        }
+    }
+    
+    // Toast notification
+    private bool showToast = false;
+    private bool toastSuccess = false;
+    private string toastMessage = "";
+
+    private void ShowToast(bool success, string message)
+    {
+        toastSuccess = success; toastMessage = message; showToast = true;
+        _ = Task.Run(async () => { await Task.Delay(3000); showToast = false; await InvokeAsync(StateHasChanged); });
+    }
+
+
+    // private async Task SavePayment()
+    // {
+    //     if (paymentAmount <= 0 || paymentAgency == null) return;
+
+    //     try
+    //     {
+    //         isSavingPayment = true;
+    //         StateHasChanged();
+
+    //         var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
+
+    //         if (success)
+    //         {
+    //             var payment = new Payment
+    //             {
+    //                 AgencyId = paymentAgency.AgencyId,
+    //                 Amount = paymentAmount,
+    //                 PaymentMethod = selectedPaymentMethod,
+    //                 PaymentDate = DateTime.Now,
+    //                 Notes = paymentNotes
+    //             };
+    //             await PaymentService.CreateAsync(payment);
+
+    //             showPaymentModal = false;
+    //             await LoadAgenciesAsync();
+
+    //             Store receipt data in session storage and open new tab
+    //             var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
+
+    //             var receiptData = new
+    //             {
+    //                 ReceiptNumber = $"REC-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}",
+    //                 ReceiptDate = DateTime.Now.ToString("dd/MM/yyyy"),
+    //                 ReceiptTime = DateTime.Now.ToString("HH:mm"),
+    //                 AgencyName = updatedAgency.AgencyName,
+    //                 AgencyCity = updatedAgency.City ?? "",
+    //                 AgencyPhone = updatedAgency.Phone ?? "",
+    //                 Amount = paymentAmount,
+    //                 Method = selectedPaymentMethod,
+    //                 DebtAmount = updatedAgency.DebtAmount,
+    //                 PaidAmount = updatedAgency.PaidAmount,
+    //                 RemainingAmount = updatedAgency.RemainingAmount,
+    //                 Notes = paymentNotes ?? ""
+    //             };
+
+    //             var json = System.Text.Json.JsonSerializer.Serialize(receiptData);
+    //             await JS.InvokeVoidAsync("sessionStorage.setItem", "receiptData", json);
+    //             await JS.InvokeVoidAsync("open", "/payment-receipt", "_blank");
+    //         }
+    //         else
+    //         {
+    //             ShowToast(false, "فشل عملية التسديد");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ShowToast(false, "حدث خطأ أثناء التسديد");
+    //     }
+    //     finally
+    //     {
+    //         isSavingPayment = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+
+
+
+
+    private async Task SavePayment()
+{
+    if (paymentAgency == null) return;
+
+    try
+    {
+        isSavingPayment = true;
+        StateHasChanged();
+
+        var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
+
+        if (success)
+        {
+            // Save payment record
+            var payment = new Payment
+            {
+                AgencyId = paymentAgency.AgencyId,
+                Amount = paymentAmount,
+                PaymentMethod = selectedPaymentMethod,
+                PaymentDate = DateTime.Now,
+                Notes = paymentNotes
+            };
+            await PaymentService.CreateAsync(payment);
+
+            // Route payment based on method
+            if (selectedPaymentMethod == "نقداً")
+            {
+                // Cash goes to MAIN treasury
+                await TreasuryService.AddAgencyPaymentToTreasuryAsync(
+                    paymentAgency.AgencyId, 
+                    paymentAgency.AgencyName, 
+                    paymentAmount, 
+                    selectedPaymentMethod, 
+                    paymentNotes
+                );
+            }
+            else
+            {
+                // Bank transfer, cheque, بريد go to OWNER bank account
+                var ownerTransaction = new OwnerTreasuryTransaction
+                {
+                    Type = "deposit",
+                    Source = "bank",
+                    Amount = paymentAmount,
+                    Description = $"دفعة من وكالة {paymentAgency.AgencyName} - {selectedPaymentMethod}",
+                    TransactionDate = DateTime.UtcNow,
+                    Notes = paymentNotes,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await TreasuryService.CreateOwnerTransactionAsync(ownerTransaction);
+            }
+
+            showPaymentModal = false;
+            await LoadAgenciesAsync();
+            
+            var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
+            await PrintReceiptDirectly(updatedAgency);
+        }
+        else
+        {
+            ShowToast(false, "فشل عملية التسديد");
+        }
+    }
+    catch (Exception ex)
+    {
+        ShowToast(false, "حدث خطأ أثناء التسديد");
+    }
+    finally
+    {
+        isSavingPayment = false;
+        StateHasChanged();
+    }
+}
+//     private async Task SavePayment()
+// {
+//     if (paymentAgency == null) return; paymentAmount <= 0 || 
+
+//     try
+//     {
+//         isSavingPayment = true;
+//         StateHasChanged();
+
+//         var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
+
+//         if (success)
+//         {
+//             var payment = new Payment
+//             {
+//                 AgencyId = paymentAgency.AgencyId,
+//                 Amount = paymentAmount,
+//                 PaymentMethod = selectedPaymentMethod,
+//                 PaymentDate = DateTime.Now,
+//                 Notes = paymentNotes
+//             };
+//             await PaymentService.CreateAsync(payment);
+
+//             showPaymentModal = false;
+//             await LoadAgenciesAsync();
+            
+//             Print receipt directly
+//             var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
+//             await PrintReceiptDirectly(updatedAgency);
+//         }
+//         else
+//         {
+//             ShowToast(false, "فشل عملية التسديد");
+//         }
+//     }
+//     catch (Exception ex)
+//     {
+//         ShowToast(false, "حدث خطأ أثناء التسديد");
+//     }
+//     finally
+//     {
+//         isSavingPayment = false;
+//         StateHasChanged();
+//     }
+// }
+private async Task PrintReceiptDirectly(Agency agency)
+{
+    var receiptNumber = $"REC-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
+    var receiptDate = DateTime.Now.ToString("dd/MM/yyyy");
+    
+    var html = $@"<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+<head><meta charset='UTF-8'><title>إيصال دفع</title>
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800&display=swap');
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{display:flex;justify-content:center;padding:0;background:#fff;font-family:'Tajawal','Cairo',sans-serif}}
+    .ticket{{width:80mm;background:#fff;padding:4mm 3mm;line-height:1.3;font-size:8px}}
+    .center{{text-align:center}}
+    .bold{{font-weight:700}}
+    .hr{{border:none;border-top:1px solid #000;margin:2mm 0}}
+    .hr-dot{{border:none;border-top:1px dotted #999;margin:1.5mm 0}}
+    
+    .header-logo{{font-size:14px;font-weight:900;letter-spacing:3px}}
+    .header-name{{font-size:9px;font-weight:700;margin:0.5mm 0}}
+    .header-sub{{font-size:6px;color:#555}}
+    
+    .title{{font-size:10px;font-weight:800;letter-spacing:1px}}
+    .title-sub{{font-size:6px;color:#666;margin:0.3mm 0}}
+    
+    .info-row{{display:flex;justify-content:space-between;font-size:8px;margin:0.3mm 0}}
+    .info-row span:first-child{{color:#555}}
+    .info-row .val{{font-weight:700}}
+    
+    .amount-box{{text-align:center;margin:2mm 0}}
+    .amount-label{{font-size:7px;color:#888;letter-spacing:1px}}
+    .amount-value{{font-size:20px;font-weight:900;font-family:'Cairo',monospace}}
+    .amount-currency{{font-size:8px;color:#555}}
+    
+    .method-box{{text-align:center;margin:1mm 0}}
+    .method-text{{font-size:8px;color:#444}}
+    
+    .stamp-area{{display:flex;justify-content:space-between;align-items:flex-end;gap:3mm;margin:4mm 0 2mm 0}}
+    .stamp-box{{text-align:center}}
+    .stamp-box-inner{{width:26mm;height:15mm;border:1px dashed #999;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:7px;margin-bottom:0.5mm}}
+    .stamp-box-inner::after{{content:'ختم الوكالة'}}
+    .sig-box{{flex:1}}
+    .sig-line{{border-top:0.5px solid #999;margin-bottom:0.3mm}}
+    .sig-text{{font-size:6px;color:#888}}
+    
+    .footer-thanks{{font-size:8px;font-weight:600;margin-bottom:0.3mm}}
+    .footer-info{{font-size:6px;color:#888}}
+    
+    @@page{{size:80mm auto;margin:0}}
+    @@media print{{body{{background:#fff}}.ticket{{box-shadow:none}}}}
+</style></head>
+<body>
+<div class='ticket'>
+    <div class='center header-logo'>خضور</div>
+    <div class='center header-name'>وكالة خضور للسياحة والعمرة</div>
+    <div class='center header-sub'>KHODOR TRAVEL & UMRAH</div>
+    
+    <hr class='hr'>
+    
+    <div class='center title'>إيصال دفع</div>
+    <div class='center title-sub'>{receiptNumber} | {receiptDate}</div>
+    
+    <hr class='hr-dot'>
+    
+    <div class='info-row'><span>الوكالة</span><span class='val'>{agency.AgencyName}</span></div>
+    <div class='info-row'><span>المدينة</span><span class='val'>{agency.City}</span></div>
+    <div class='info-row'><span>الهاتف</span><span class='val'>{agency.Phone ?? "031 12 34 56"}</span></div>
+    
+    <hr class='hr'>
+    
+    <div class='amount-box'>
+        <div class='amount-label'>المبلغ المدفوع</div>
+        <div class='amount-value'>{paymentAmount.ToString("N0")}</div>
+        <div class='amount-currency'>دينار جزائري</div>
+    </div>
+    
+    <div class='method-box'>
+        <span>طريقة الدفع: </span><span class='bold'>{selectedPaymentMethod}</span>
+    </div>
+    
+    {(string.IsNullOrEmpty(paymentNotes) ? "" : $"<div class='center' style='font-size:7px;color:#666;margin:1mm 0'>{paymentNotes}</div>")}
+    
+    <hr class='hr'>
+    
+    <div class='stamp-area'>
+        <div class='stamp-box'>
+            <div class='stamp-box-inner'></div>
+        </div>
+        <div class='sig-box'>
+            <div class='sig-line'></div>
+            <div class='sig-text'>توقيع المستلم</div>
+        </div>
+    </div>
+    
+    <hr class='hr'>
+    
+    <div class='center footer-thanks'>شكراً لتعاملكم معنا</div>
+    <div class='center footer-info'>س.ت: 123456789 | ض.م: 987654321</div>
+    <div class='center footer-info'>031 12 34 56 | شارع العربي بن مهيدي، قسنطينة</div>
+</div>
+<script>window.print();window.close();</script>
+</body></html>";
+
+    await JS.InvokeVoidAsync("printReceipt", html);
+}
+
+}

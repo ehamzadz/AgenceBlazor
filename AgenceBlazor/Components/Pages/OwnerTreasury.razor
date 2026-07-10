@@ -1,0 +1,592 @@
+﻿@page "/owner-treasury"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject TreasuryService TreasuryService
+
+<div class="expenses-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon" style="background: rgba(255, 255, 255, 0.15);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                    <circle cx="12" cy="15" r="2" />
+                    <path d="M7 15h.01" />
+                    <path d="M17 15h.01" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">الخزينة الشخصية للمالك</h1>
+                <p class="page-subtitle">إدارة الحساب البنكي والنقدي</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item" style="background: #ede9fe;">
+                <div class="stat-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5b21b6" stroke-width="2">
+                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                </div>
+                <span class="stat-value">@bankBalance.ToString("N0")</span>
+                <span class="stat-label">البنك</span>
+            </div>
+            <div class="stat-item" style="background: #fef3c7;">
+                <div class="stat-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <span class="stat-value">@cashBalance.ToString("N0")</span>
+                <span class="stat-label">النقد</span>
+            </div>
+            <div class="stat-item" style="background: #fce4ec;">
+                <div class="stat-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#be185d" stroke-width="2">
+                        <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m18 0a9 9 0 0 1-4.5 7.8M12 21a9 9 0 0 1-4.5-7.8M12 3a9 9 0 0 1 4.5 7.8" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                </div>
+                <span class="stat-value">@expensesTotal.ToString("N0")</span>
+                <span class="stat-label">مصاريف</span>
+            </div>
+            <div class="stat-item" style="background: #dbeafe;">
+                <div class="stat-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                        <path d="M12 18V6" />
+                    </svg>
+                </div>
+                <span class="stat-value">@totalBalance.ToString("N0")</span>
+                <span class="stat-label">المجموع</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث..." @bind="searchQuery" @bind:event="oninput" />
+            </div>
+            <div class="filter-row">
+                <select class="filter-select" @bind="filterType" @bind:event="onchange">
+                    <option value="">جميع الأنواع</option>
+                    <option value="deposit">إيداع</option>
+                    <option value="withdrawal">سحب</option>
+                    <option value="expense">مصروف</option>
+                    <option value="transfer_to_main">تحويل للخزينة</option>
+                    <option value="transfer_from_main">استلام من الخزينة</option>
+                </select>
+                <select class="filter-select" @bind="filterSource" @bind:event="onchange">
+                    <option value="">الكل</option>
+                    <option value="bank">بنك</option>
+                    <option value="cash">نقد</option>
+                </select>
+                <input type="date" class="filter-date" @bind="filterDateFrom" @bind:format="yyyy-MM-dd" />
+                <input type="date" class="filter-date" @bind="filterDateTo" @bind:format="yyyy-MM-dd" />
+            </div>
+            @* <div class="filter-row">
+                <button class="add-btn" @onclick='() => OpenAddModal("deposit", "bank")' style="background:#059669;">🏦 إيداع بنكي</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("deposit", "cash")' style="background:#059669;">💵 إيداع نقدي</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("withdrawal", "bank")' style="background:#dc2626;">🏦 سحب بنكي</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("withdrawal", "cash")' style="background:#dc2626;">💵 سحب نقدي</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("expense", "bank")' style="background:#f59e0b;">🏦 مصروف بنكي</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("expense", "cash")' style="background:#f59e0b;">💵 مصروف نقدي</button>
+            </div>
+            <div class="filter-row" style="margin-top: 0.5rem;">
+                <button class="add-btn" @onclick="OpenTransferToMainModal" style="background:#7c3aed;">➡️ تمويل الخزينة</button>
+                <button class="add-btn" @onclick="OpenTransferFromMainModal" style="background:#2563eb;">⬅️ استلام من الخزينة</button>
+            </div> *@
+            <div class="filter-row">
+                <button class="action-btn-primary deposit-btn" @onclick='() => OpenAddModal("deposit", "bank")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <polyline points="19 12 12 19 5 12"></polyline>
+                    </svg>
+                    <span>إيداع بنكي</span>
+                </button>
+                <button class="action-btn-primary deposit-btn" @onclick='() => OpenAddModal("deposit", "cash")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <polyline points="19 12 12 19 5 12"></polyline>
+                    </svg>
+                    <span>إيداع نقدي</span>
+                </button>
+                <button class="action-btn-primary withdrawal-btn" @onclick='() => OpenAddModal("withdrawal", "bank")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    <span>سحب بنكي</span>
+                </button>
+                <button class="action-btn-primary withdrawal-btn" @onclick='() => OpenAddModal("withdrawal", "cash")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    <span>سحب نقدي</span>
+                </button>
+                <button class="action-btn-primary expense-btn" @onclick='() => OpenAddModal("expense", "bank")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>مصروف بنكي</span>
+                </button>
+                <button class="action-btn-primary expense-btn" @onclick='() => OpenAddModal("expense", "cash")'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>مصروف نقدي</span>
+                </button>
+            </div>
+            <div class="filter-row transfer-row">
+                <button class="action-btn-primary transfer-main-btn" @onclick="OpenTransferToMainModal">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span>تمويل الخزينة</span>
+                </button>
+                <button class="action-btn-primary transfer-from-main-btn" @onclick="OpenTransferFromMainModal">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="2" y1="2" x2="13" y2="13"></line>
+                        <polygon points="2 2 9 22 13 13 22 9 2 2"></polygon>
+                    </svg>
+                    <span>استلام من الخزينة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري التحميل...</p></div>
+    }
+    else if (filteredTransactions.Any())
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>النوع</th>
+                        <th>المصدر</th>
+                        <th>الوصف</th>
+                        <th>المبلغ</th>
+                        <th>ملاحظات</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in filteredTransactions)
+                    {
+                        <tr>
+                            <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <span class="type-badge @t.Type">
+                                    @GetTypeLabel(t.Type)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="source-badge @t.Source">
+                                    @(t.Source == "bank" ? "🏦 بنك" : "💵 نقد")
+                                </span>
+                            </td>
+                            <td>@t.Description</td>
+                            <td class="cell-amount @(t.Type == "deposit" || t.Type == "transfer_from_main" ? "deposit" : "withdrawal")">
+                                @(t.Type == "deposit" || t.Type == "transfer_from_main" ? "+" : "-") @t.Amount.ToString("N0") دج
+                            </td>
+                            <td>@t.Notes</td>
+                            <td class="cell-actions">
+                                <button class="action-btn delete" @onclick="() => ConfirmDelete(t)" title="حذف">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results"><h3>لا توجد معاملات</h3></div>
+    }
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background: @(formModel.Type == "expense" ? "#f59e0b" : formModel.Type == "withdrawal" ? "#dc2626" : "#7c3aed");">
+                <h3>@GetModalTitle()</h3>
+                <button class="modal-close" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <input type="text" class="form-input" @bind="formModel.Description" />
+                </div>
+                <div class="form-group">
+                    <label>المبلغ</label>
+                    <input type="number" class="form-input" @bind="formModel.Amount" step="100" min="0" />
+                </div>
+                <div class="form-group">
+                    <label>المصدر</label>
+                    <select class="form-input" @bind="formModel.Source" disabled>
+                        <option value="bank">بنك</option>
+                        <option value="cash">نقد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>التاريخ</label>
+                    <input type="date" class="form-input" @bind="formModel.TransactionDate" @bind:format="yyyy-MM-dd" />
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" class="form-input" @bind="formModel.Notes" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModal">إلغاء</button>
+                <button class="btn-save" @onclick="SaveTransaction">💾 حفظ</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Transfer to Main Modal -->
+@if (showTransferToMainModal)
+{
+    <div class="modal-overlay" @onclick="CloseTransferToMainModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background: #7c3aed;">
+                <h3 style="color: white;">تمويل الخزينة الرئيسية</h3>
+                <button class="modal-close" style="color: white;" @onclick="CloseTransferToMainModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>المصدر</label>
+                    <select class="form-input" @bind="transferToMainSource">
+                        <option value="bank">🏦 من البنك (@bankBalance.ToString("N0") دج)</option>
+                        <option value="cash">💵 من النقد (@cashBalance.ToString("N0") دج)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المبلغ</label>
+                    <input type="number" class="form-input" @bind="transferToMainAmount" step="100" min="0" />
+                </div>
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <input type="text" class="form-input" @bind="transferToMainDescription" />
+                </div>
+                <div class="form-group">
+                    <label>التاريخ</label>
+                    <input type="date" class="form-input" @bind="transferToMainDate" @bind:format="yyyy-MM-dd" />
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" class="form-input" @bind="transferToMainNotes" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseTransferToMainModal">إلغاء</button>
+                <button class="btn-save" @onclick="ExecuteTransferToMain">💾 تحويل</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Transfer from Main Modal -->
+@if (showTransferFromMainModal)
+{
+    <div class="modal-overlay" @onclick="CloseTransferFromMainModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background: #2563eb;">
+                <h3 style="color: white;">استلام من الخزينة الرئيسية</h3>
+                <button class="modal-close" style="color: white;" @onclick="CloseTransferFromMainModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>الوجهة</label>
+                    <select class="form-input" @bind="transferFromMainSource">
+                        <option value="bank">🏦 إلى البنك</option>
+                        <option value="cash">💵 إلى النقد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المبلغ</label>
+                    <input type="number" class="form-input" @bind="transferFromMainAmount" step="100" min="0" />
+                </div>
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <input type="text" class="form-input" @bind="transferFromMainDescription" />
+                </div>
+                <div class="form-group">
+                    <label>التاريخ</label>
+                    <input type="date" class="form-input" @bind="transferFromMainDate" @bind:format="yyyy-MM-dd" />
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" class="form-input" @bind="transferFromMainNotes" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseTransferFromMainModal">إلغاء</button>
+                <button class="btn-save" @onclick="ExecuteTransferFromMain">💾 استلام</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation -->
+@if (showDeleteDialog && transactionToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;">
+                <h3 style="color:white;">تأكيد الحذف</h3>
+                <button class="modal-close" style="color:white;" @onclick="CancelDelete">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذه المعاملة؟</p>
+                <div class="delete-info">
+                    <div class="info-row"><span>الوصف:</span><span>@transactionToDelete.Description</span></div>
+                    <div class="info-row"><span>المبلغ:</span><span>@transactionToDelete.Amount.ToString("N0") دج</span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDelete">إلغاء</button>
+                <button class="btn-delete" @onclick="DeleteTransaction">🗑️ حذف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<OwnerTreasuryTransaction> transactions = new();
+    private List<OwnerTreasuryTransaction> filteredTransactions = new();
+    private bool isLoading = true;
+    private decimal bankBalance = 0;
+    private decimal cashBalance = 0;
+    private decimal totalBalance = 0;
+    private decimal expensesTotal = 0;
+
+    // Modal states
+    private bool showModal = false;
+    private bool showTransferToMainModal = false;
+    private bool showTransferFromMainModal = false;
+    private bool showDeleteDialog = false;
+    private OwnerTreasuryTransaction formModel = new();
+    private OwnerTreasuryTransaction? transactionToDelete = null;
+
+    // Transfer to main fields
+    private string transferToMainSource = "bank";
+    private decimal transferToMainAmount;
+    private string transferToMainDescription = "";
+    private DateTime transferToMainDate = DateTime.UtcNow;
+    private string transferToMainNotes = "";
+
+    // Transfer from main fields
+    private string transferFromMainSource = "bank";
+    private decimal transferFromMainAmount;
+    private string transferFromMainDescription = "";
+    private DateTime transferFromMainDate = DateTime.UtcNow;
+    private string transferFromMainNotes = "";
+
+    // Filters
+    private string _searchQuery = "";
+    private string searchQuery { get => _searchQuery; set { _searchQuery = value; ApplyFilters(); } }
+    private string _filterType = "";
+    private string filterType { get => _filterType; set { _filterType = value; ApplyFilters(); } }
+    private string _filterSource = "";
+    private string filterSource { get => _filterSource; set { _filterSource = value; ApplyFilters(); } }
+    private DateTime? _filterDateFrom = null;
+    private DateTime? filterDateFrom { get => _filterDateFrom; set { _filterDateFrom = value; ApplyFilters(); } }
+    private DateTime? _filterDateTo = null;
+    private DateTime? filterDateTo { get => _filterDateTo; set { _filterDateTo = value; ApplyFilters(); } }
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        transactions = await TreasuryService.GetOwnerTransactionsAsync();
+
+        var (bank, cash, total, expenses) = await TreasuryService.GetOwnerBalanceWithExpensesAsync();
+        bankBalance = bank;
+        cashBalance = cash;
+        totalBalance = total;
+        expensesTotal = expenses;
+
+        ApplyFilters();
+        isLoading = false;
+    }
+
+    private void ApplyFilters()
+    {
+        var query = transactions.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+            query = query.Where(t =>
+                (t.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (t.Notes?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        if (!string.IsNullOrWhiteSpace(filterType))
+            query = query.Where(t => t.Type == filterType);
+
+        if (!string.IsNullOrWhiteSpace(filterSource))
+            query = query.Where(t => t.Source == filterSource);
+
+        if (filterDateFrom.HasValue)
+            query = query.Where(t => t.TransactionDate >= filterDateFrom.Value);
+
+        if (filterDateTo.HasValue)
+            query = query.Where(t => t.TransactionDate <= filterDateTo.Value);
+
+        filteredTransactions = query.OrderByDescending(t => t.TransactionDate).ToList();
+
+        // Update expenses total from filtered data
+        expensesTotal = filteredTransactions.Where(t => t.Type == "expense").Sum(t => t.Amount);
+
+        StateHasChanged();
+    }
+
+    private string GetTypeLabel(string type)
+    {
+        return type switch
+        {
+            "deposit" => "إيداع",
+            "withdrawal" => "سحب",
+            "expense" => "مصروف",
+            "transfer_to_main" => "تحويل للخزينة",
+            "transfer_from_main" => "استلام من الخزينة",
+            _ => type
+        };
+    }
+
+    private string GetModalTitle()
+    {
+        var typeLabel = formModel.Type switch
+        {
+            "deposit" => "إيداع",
+            "withdrawal" => "سحب",
+            "expense" => "مصروف",
+            _ => formModel.Type
+        };
+        var sourceLabel = formModel.Source == "bank" ? "بنكي" : "نقدي";
+        return $"{typeLabel} {sourceLabel}";
+    }
+
+    private void OpenAddModal(string type, string source)
+    {
+        formModel = new OwnerTreasuryTransaction
+        {
+            Type = type,
+            Source = source,
+            TransactionDate = DateTime.UtcNow
+        };
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task SaveTransaction()
+    {
+        await TreasuryService.CreateOwnerTransactionAsync(formModel);
+        showModal = false;
+        await LoadData();
+    }
+
+    private void OpenTransferToMainModal()
+    {
+        transferToMainAmount = 0;
+        transferToMainDescription = "";
+        transferToMainDate = DateTime.UtcNow;
+        transferToMainNotes = "";
+        showTransferToMainModal = true;
+    }
+
+    private void CloseTransferToMainModal() => showTransferToMainModal = false;
+
+    private async Task ExecuteTransferToMain()
+    {
+        bool success;
+        if (transferToMainSource == "bank")
+            success = await TreasuryService.TransferFromOwnerBankToMain(
+                transferToMainAmount, transferToMainDescription, transferToMainDate, transferToMainNotes);
+        else
+            success = await TreasuryService.TransferFromOwnerCashToMain(
+                transferToMainAmount, transferToMainDescription, transferToMainDate, transferToMainNotes);
+
+        if (success)
+        {
+            showTransferToMainModal = false;
+            await LoadData();
+        }
+    }
+
+    private void OpenTransferFromMainModal()
+    {
+        transferFromMainAmount = 0;
+        transferFromMainDescription = "";
+        transferFromMainDate = DateTime.UtcNow;
+        transferFromMainNotes = "";
+        showTransferFromMainModal = true;
+    }
+
+    private void CloseTransferFromMainModal() => showTransferFromMainModal = false;
+
+    private async Task ExecuteTransferFromMain()
+    {
+        bool success;
+        if (transferFromMainSource == "bank")
+            success = await TreasuryService.TransferFromMainToOwnerBank(
+                transferFromMainAmount, transferFromMainDescription, transferFromMainDate, transferFromMainNotes);
+        else
+            success = await TreasuryService.TransferFromMainToOwnerCash(
+                transferFromMainAmount, transferFromMainDescription, transferFromMainDate, transferFromMainNotes);
+
+        if (success)
+        {
+            showTransferFromMainModal = false;
+            await LoadData();
+        }
+    }
+
+    private void ConfirmDelete(OwnerTreasuryTransaction t)
+    {
+        transactionToDelete = t;
+        showDeleteDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteDialog = false;
+        transactionToDelete = null;
+    }
+
+    private async Task DeleteTransaction()
+    {
+        if (transactionToDelete == null) return;
+        await TreasuryService.DeleteOwnerTransactionAsync(transactionToDelete.Id);
+        showDeleteDialog = false;
+        transactionToDelete = null;
+        await LoadData();
+    }
+}

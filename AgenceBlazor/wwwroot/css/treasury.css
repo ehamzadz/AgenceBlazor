@@ -1,0 +1,587 @@
+﻿/* ============================================
+   TREASURY PAGES - COMPLETE STYLES
+   ============================================ */
+
+.treasury-page {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    direction: rtl;
+}
+
+/* Header */
+.treasury-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: #111;
+}
+
+.header-left p {
+    font-size: 13px;
+    color: #777;
+    margin: 2px 0 0;
+}
+
+.header-stats {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 12px 20px;
+    background: #f9fafb;
+    border-radius: 12px;
+    min-width: 120px;
+}
+
+.stat-num {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.stat-txt {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Action Buttons */
+.treasury-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+.btn-deposit {
+    background: #059669;
+}
+
+.btn-withdraw {
+    background: #dc2626;
+}
+
+.btn-expense {
+    background: #d97706;
+}
+
+.btn-transfer {
+    background: #7c3aed;
+}
+
+/* Filters */
+.filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+    .search-box svg {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        color: #999;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 40px 10px 14px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #f9fafb;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #059669;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+        }
+
+.filter-select,
+.filter-date {
+    padding: 10px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #f9fafb;
+    cursor: pointer;
+}
+
+    .filter-select:focus,
+    .filter-date:focus {
+        outline: none;
+        border-color: #059669;
+    }
+
+.btn-clear {
+    padding: 10px 16px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    color: #666;
+}
+
+    .btn-clear:hover {
+        background: #e5e7eb;
+    }
+
+/* Table */
+.table-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.treasury-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .treasury-table th {
+        background: #f9fafb;
+        padding: 14px 16px;
+        text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        color: #555;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .treasury-table td {
+        padding: 14px 16px;
+        font-size: 14px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #333;
+    }
+
+    .treasury-table tr:hover td {
+        background: #f9fafb;
+    }
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-deposit {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-withdrawal {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-expense {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-transfer_in {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.badge-transfer_out {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+/* Amount Colors */
+.amount.positive {
+    color: #059669;
+    font-weight: 600;
+}
+
+.amount.negative {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* Buttons */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover {
+    background: #fee2e2;
+}
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 60px;
+    color: #888;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #059669;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px;
+    background: #fff;
+    border-radius: 12px;
+}
+
+    .empty-state h3 {
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .empty-state p {
+        color: #999;
+    }
+
+/* Modal */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-dialog {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.modal-sm {
+    max-width: 400px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #111;
+    }
+
+.bg-danger {
+    background: #dc2626;
+}
+
+    .bg-danger h3 {
+        color: #fff;
+    }
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #999;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+    .modal-close:hover {
+        background: #f3f4f6;
+    }
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Form Fields */
+.form-field {
+    margin-bottom: 16px;
+}
+
+    .form-field label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .form-field input,
+    .form-field select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        box-sizing: border-box;
+        transition: all 0.2s;
+    }
+
+        .form-field input:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+        }
+
+/* Transfer Info */
+.transfer-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.transfer-from,
+.transfer-to {
+    flex: 1;
+    text-align: center;
+}
+
+    .transfer-from span,
+    .transfer-to span {
+        display: block;
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+
+    .transfer-from strong {
+        color: #059669;
+        font-size: 18px;
+    }
+
+.transfer-arrow {
+    font-size: 24px;
+    color: #7c3aed;
+    font-weight: bold;
+}
+
+/* Delete Details */
+.delete-details {
+    background: #f9fafb;
+    padding: 14px;
+    border-radius: 10px;
+    margin-top: 12px;
+}
+
+    .delete-details div {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 14px;
+    }
+
+    .delete-details span {
+        color: #888;
+    }
+
+    .delete-details strong {
+        color: #333;
+    }
+
+/* Buttons */
+.btn-cancel {
+    padding: 10px 20px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    color: #666;
+}
+
+    .btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+.btn-submit {
+    padding: 10px 24px;
+    background: #059669;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: #fff;
+}
+
+    .btn-submit:hover {
+        background: #047857;
+        box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+    }
+
+.btn-danger {
+    padding: 10px 24px;
+    background: #dc2626;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: #fff;
+}
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .treasury-page {
+        padding: 12px;
+    }
+
+    .treasury-header {
+        flex-direction: column;
+    }
+
+    .header-stats {
+        flex-wrap: wrap;
+    }
+
+    .stat-box {
+        min-width: 80px;
+        padding: 10px;
+    }
+
+    .treasury-actions {
+        flex-direction: column;
+    }
+
+    .filters-bar {
+        flex-direction: column;
+    }
+
+    .treasury-table {
+        font-size: 12px;
+    }
+
+        .treasury-table th, .treasury-table td {
+            padding: 10px 8px;
+        }
+}

@@ -1,0 +1,315 @@
+﻿@page "/hotels-management"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject HotelService HotelService
+@inject TripService TripService
+
+<div class="hotels-mgmt-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M3 21h18"></path>
+                    <path d="M3 7v14h18V7l-9-5-9 5z"></path>
+                    <path d="M9 21v-8h6v8"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">إدارة الفنادق والأسعار</h1>
+                <p class="page-subtitle">فنادق الرحلات والأسعار حسب نوع الغرفة</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@hotels.Count</span>
+                <span class="stat-label">فندق</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@hotels.Select(h => h.TripId).Distinct().Count()</span>
+                <span class="stat-label">رحلة</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث عن فندق أو رحلة..."
+                       @bind="searchQuery" @bind:event="oninput" />
+                <select class="filter-select" value="@filterTripId" @onchange="OnTripFilterChanged">
+                    <option value="">جميع الرحلات</option>
+                    @foreach (var trip in trips)
+                    {
+                        <option value="@trip.Id">@trip.TripNumber - @trip.TripName</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري التحميل...</p></div>
+    }
+    else if (filteredHotels.Any())
+    {
+        <!-- Hotels Grid -->
+        <div class="hotels-grid">
+            @foreach (var hotel in filteredHotels)
+            {
+                <div class="hotel-card">
+                    <!-- Hotel Header -->
+                    <div class="hotel-card-header">
+                        <div class="hotel-name-section">
+                            <div class="hotel-icon">🏨</div>
+                            <div>
+                                <div class="hotel-name">@hotel.Name</div>
+                                <div class="hotel-trip-name">@hotel.Trip?.TripName</div>
+                            </div>
+                        </div>
+                        <div class="hotel-trip-badge">
+                            <span class="trip-number">@hotel.Trip?.TripNumber</span>
+                            <span class="trip-date">@(hotel.Trip?.DepartureDate.ToString("dd/MM/yyyy"))</span>
+                        </div>
+                    </div>
+
+                    <!-- Prices Grid -->
+                    <div class="hotel-prices-grid">
+                        <div class="price-item @(hotel.GroupPrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">جماعي</div>
+                            <div class="price-value">@hotel.GroupPrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                        <div class="price-item @(hotel.QuadruplePrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">رباعي</div>
+                            <div class="price-value">@hotel.QuadruplePrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                        <div class="price-item @(hotel.TriplePrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">ثلاثي</div>
+                            <div class="price-value">@hotel.TriplePrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                        <div class="price-item @(hotel.DoublePrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">ثنائي</div>
+                            <div class="price-value">@hotel.DoublePrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                        <div class="price-item child @(hotel.ChildPrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">👶 طفل</div>
+                            <div class="price-value">@hotel.ChildPrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                        <div class="price-item infant @(hotel.InfantPrice > 0 ? "" : "zero")">
+                            <div class="price-room-type">🍼 رضيع</div>
+                            <div class="price-value">@hotel.InfantPrice.ToString("N0")</div>
+                            <div class="price-currency">دج</div>
+                        </div>
+                    </div>
+
+                    <!-- Route & Airline -->
+                    <div class="hotel-trip-info">
+                        <span class="route">✈ @hotel.Trip?.DepartureFrom → @hotel.Trip?.ArrivalTo</span>
+                        <span class="airline">@hotel.Trip?.Airline</span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="hotel-card-actions">
+                        <button class="h-action-btn edit" @onclick="() => OpenEditModal(hotel)" title="تعديل">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            <span>تعديل</span>
+                        </button>
+                        <button class="h-action-btn delete" @onclick="() => ConfirmDelete(hotel)" title="حذف">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            <span>حذف</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="no-results">
+            <div class="no-results-icon">🏨</div>
+            <h3>لا توجد فنادق</h3>
+            <p>لم يتم العثور على أي فنادق</p>
+        </div>
+    }
+</div>
+
+<!-- Edit Modal -->
+@if (showEditHotelModal && editHotel != null)
+{
+    <div class="modal-overlay" @onclick="CancelEditHotel">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>تعديل فندق: @editHotel.Name</h3>
+                <button class="modal-close" @onclick="CancelEditHotel">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">اسم الفندق</label>
+                    <input type="text" class="form-input" @bind="editHotelName" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">جماعي</label>
+                    <input type="number" class="form-input" @bind="editGroupPrice" step="1000" min="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">رباعي</label>
+                    <input type="number" class="form-input" @bind="editQuadruplePrice" step="1000" min="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ثلاثي</label>
+                    <input type="number" class="form-input" @bind="editTriplePrice" step="1000" min="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ثنائي</label>
+                    <input type="number" class="form-input" @bind="editDoublePrice" step="1000" min="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">طفل</label>
+                    <input type="number" class="form-input" @bind="editChildPrice" step="1000" min="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">رضيع</label>
+                    <input type="number" class="form-input" @bind="editInfantPrice" step="1000" min="0" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelEditHotel">إلغاء</button>
+                <button class="btn-save" @onclick="SaveEditHotel">💾 حفظ</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation -->
+@if (showDeleteHotelDialog && hotelToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDeleteHotel">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;">
+                <h3 style="color:white;">تأكيد الحذف</h3>
+                <button class="modal-close" style="color:white;" @onclick="CancelDeleteHotel">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف فندق <strong>@hotelToDelete.Name</strong> من رحلة <strong>@hotelToDelete.Trip?.TripName</strong>؟</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDeleteHotel">إلغاء</button>
+                <button class="btn-delete" @onclick="DeleteHotel">🗑️ حذف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Hotel> hotels = new();
+    private List<Hotel> filteredHotels = new();
+    private List<Trip> trips = new();
+    private string searchQuery = "";
+    private string filterTripId = "";
+    private bool isLoading = true;
+
+    // Edit
+    private bool showEditHotelModal = false;
+    private Hotel editHotel = null;
+    private string editHotelName = "";
+    private decimal editGroupPrice, editQuadruplePrice, editTriplePrice, editDoublePrice, editChildPrice, editInfantPrice;
+
+    // Delete
+    private bool showDeleteHotelDialog = false;
+    private Hotel hotelToDelete = null;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            hotels = await HotelService.GetAllHotelsWithTripsAsync();
+            trips = await TripService.GetAllTripsAsync();
+            ApplyFilters();
+        }
+        catch { }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = hotels.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var q = searchQuery.ToLower();
+            query = query.Where(h => h.Name.ToLower().Contains(q) || (h.Trip?.TripName?.ToLower().Contains(q) ?? false));
+        }
+        if (!string.IsNullOrWhiteSpace(filterTripId) && int.TryParse(filterTripId, out var tid))
+            query = query.Where(h => h.TripId == tid);
+        filteredHotels = query.OrderBy(h => h.Trip?.DepartureDate).ThenBy(h => h.Name).ToList();
+    }
+
+    private async Task OnTripFilterChanged(ChangeEventArgs e)
+    {
+        filterTripId = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    // Edit
+    private void OpenEditModal(Hotel hotel)
+    {
+        editHotel = hotel;
+        editHotelName = hotel.Name;
+        editGroupPrice = hotel.GroupPrice;
+        editQuadruplePrice = hotel.QuadruplePrice;
+        editTriplePrice = hotel.TriplePrice;
+        editDoublePrice = hotel.DoublePrice;
+        editChildPrice = hotel.ChildPrice;
+        editInfantPrice = hotel.InfantPrice;
+        showEditHotelModal = true;
+    }
+    private void CancelEditHotel() { showEditHotelModal = false; editHotel = null; }
+    private async Task SaveEditHotel()
+    {
+        if (editHotel == null) return;
+        editHotel.Name = editHotelName;
+        editHotel.GroupPrice = editGroupPrice;
+        editHotel.QuadruplePrice = editQuadruplePrice;
+        editHotel.TriplePrice = editTriplePrice;
+        editHotel.DoublePrice = editDoublePrice;
+        editHotel.ChildPrice = editChildPrice;
+        editHotel.InfantPrice = editInfantPrice;
+        await HotelService.UpdateHotelAsync(editHotel);
+        showEditHotelModal = false; editHotel = null;
+        await LoadData();
+    }
+
+    // Delete
+    private void ConfirmDelete(Hotel hotel) { hotelToDelete = hotel; showDeleteHotelDialog = true; }
+    private void CancelDeleteHotel() { showDeleteHotelDialog = false; hotelToDelete = null; }
+    private async Task DeleteHotel()
+    {
+        if (hotelToDelete == null) return;
+        await HotelService.DeleteHotelAsync(hotelToDelete.Id);
+        showDeleteHotelDialog = false; hotelToDelete = null;
+        await LoadData();
+    }
+}

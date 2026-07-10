@@ -1,0 +1,373 @@
+﻿@page "/trips"
+@rendermode InteractiveServer
+@using System.Globalization
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject TripService TripService
+@inject HotelService HotelService
+@layout AgenceBlazor.Components.Layout.EmptyLayout
+
+<div class="public-trips-page">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                    <path d="M2 12h20" />
+                </svg>
+                <span>رحلات العمرة 2026</span>
+            </div>
+            <h1 class="hero-title">اختر <span>رحلة عمرتك</span></h1>
+            <p class="hero-subtitle">رحلات مميزة إلى بيت الله الحرام بأفضل الخدمات والأسعار</p>
+
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-number">@allTrips.Count</span>
+                    <span class="hero-stat-label">رحلة متاحة</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="hero-stat-number">@allTrips.Sum(t => t.RemainingSeats)</span>
+                    <span class="hero-stat-label">مقعد متبقي</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="hero-stat-number">+@distinctHotelCount</span>
+                    <span class="hero-stat-label">فندق</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-pattern">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M0,0 L100,0 L100,100 Q50,80 0,100 Z" fill="#f8fafc" />
+            </svg>
+        </div>
+    </section>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input type="text" class="search-input" placeholder="ابحث عن رحلة... (المدينة، الخطوط، التاريخ)"
+                       @bind="searchQuery" @bind:event="oninput" />
+                @if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    <button class="search-clear" @onclick="ClearSearch">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                }
+            </div>
+            <div class="filter-chips">
+                <button class="filter-chip @(filterType == "" ? "active" : "")" @onclick="ClearFilter">الكل</button>
+                <button class="filter-chip @(filterType == "مباشرة" ? "active" : "")" @onclick='() => SetFilter("مباشرة")'>مباشرة</button>
+                <button class="filter-chip @(filterType == "غير مباشرة" ? "active" : "")" @onclick='() => SetFilter("غير مباشرة")'>غير مباشرة</button>
+            </div>
+            @if (filteredTrips.Any())
+            {
+                <div class="results-count"><span>@filteredTrips.Count</span> رحلة متاحة</div>
+            }
+        </div>
+    </section>
+
+    <!-- Trips Grid -->
+    <section class="trips-section">
+        @if (isLoading)
+        {
+            <div class="loading-state"><div class="loading-spinner"></div><p>جاري تحميل الرحلات...</p></div>
+        }
+        else if (filteredTrips.Any())
+        {
+            <div class="trips-grid">
+                @foreach (var trip in filteredTrips)
+                {
+                    <div class="trip-card @(trip.RemainingSeats <= 5 ? "almost-full" : "")">
+                        <div class="card-accent"></div>
+                        <div class="card-header">
+                            <div class="card-header-top">
+                                <span class="trip-number">@trip.TripNumber</span>
+                                <span class="trip-type @(trip.TripType == "مباشرة" ? "direct" : "indirect")">@trip.TripType</span>
+                            </div>
+                            <h3 class="trip-name">@trip.TripName</h3>
+                        </div>
+
+                        <div class="card-route">
+                            <div class="route-city">
+                                <div class="city-dot depart"></div>
+                                <span class="city-label">المغادرة</span>
+                                <span class="city-name">@trip.DepartureFrom</span>
+                            </div>
+                            <div class="route-line-container">
+                                <div class="route-plane">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                        <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="route-city">
+                                <div class="city-dot arrive"></div>
+                                <span class="city-label">الوصول</span>
+                                <span class="city-name">@trip.ArrivalTo</span>
+                            </div>
+                        </div>
+
+                        <div class="card-details">
+                            <div class="detail-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                <span>@trip.DepartureDate.ToString("dd MMMM yyyy", new CultureInfo("ar-SA"))</span>
+                            </div>
+                            <div class="detail-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                </svg>
+                                <span>@trip.Airline</span>
+                            </div>
+                            <div class="detail-item">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                    <path d="M2 17l10 5 10-5" />
+                                    <path d="M2 12l10 5 10-5" />
+                                </svg>
+                                <span>@trip.Program</span>
+                            </div>
+                        </div>
+
+                        <div class="card-seats">
+                            <div class="seats-header">
+                                <span>المقاعد المتاحة</span>
+                                <span class="seats-count @(trip.RemainingSeats <= 10 ? "urgent" : "")">@trip.RemainingSeats / @trip.TotalSeats</span>
+                            </div>
+                            <div class="seats-bar">
+                                <div class="seats-fill @(trip.RemainingSeats <= 5 ? "critical" : trip.RemainingSeats <= 10 ? "urgent" : "")"
+                                     style="width: @((double)(trip.TotalSeats - trip.RemainingSeats) / trip.TotalSeats * 100)%"></div>
+                            </div>
+                            @if (trip.RemainingSeats <= 10)
+                            {
+                                <div class="seats-warning">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                        <line x1="12" y1="9" x2="12" y2="13" />
+                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
+                                    <span>تبقى @trip.RemainingSeats مقاعد فقط!</span>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="card-hotels">
+                            <div class="hotels-header" @onclick="() => ToggleHotels(trip.Id)">
+                                <div class="hotels-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                        <path d="M3 21h18" />
+                                        <path d="M3 7v14h18V7l-9-5-9 5z" />
+                                    </svg>
+                                    <span>الفنادق المتاحة</span>
+                                    @{
+                                        var hotelCount = tripHotelsData.ContainsKey(trip.Id) ? tripHotelsData[trip.Id].Count : 0;
+                                    }
+                                    <span class="hotels-count">@hotelCount</span>
+                                </div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"
+                                     class="hotels-arrow @(expandedTripId == trip.Id ? "expanded" : "")">
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </div>
+                            @if (expandedTripId == trip.Id)
+                            {
+                                <div class="hotels-list">
+                                    @if (tripHotelsData.ContainsKey(trip.Id) && tripHotelsData[trip.Id].Any())
+                                    {
+                                        foreach (var hotel in tripHotelsData[trip.Id])
+                                        {
+                                            <div class="hotel-card">
+                                                <div class="hotel-icon">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                                                        <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16" />
+                                                        <path d="M3 21h18" />
+                                                    </svg>
+                                                </div>
+                                                <div class="hotel-info"><span class="hotel-name">@hotel.Name</span></div>
+                                                <div class="hotel-prices">
+                                                    <div class="price-item"><span class="price-label">جماعي</span><span class="price-value">@hotel.GroupPrice.ToString("N0")</span></div>
+                                                    <div class="price-item"><span class="price-label">رباعي</span><span class="price-value">@hotel.QuadruplePrice.ToString("N0")</span></div>
+                                                    <div class="price-item"><span class="price-label">ثلاثي</span><span class="price-value">@hotel.TriplePrice.ToString("N0")</span></div>
+                                                    <div class="price-item"><span class="price-label">ثنائي</span><span class="price-value">@hotel.DoublePrice.ToString("N0")</span></div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="no-hotels"><span>لا توجد فنادق مضافة بعد</span></div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="card-footer">
+                            <button class="book-btn" @onclick="() => ShowContactInfo(trip)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                </svg>
+                                احجز الآن
+                            </button>
+                            @if (trip.RemainingSeats > 0)
+                            {
+                                <span class="price-start">من <strong>@GetLowestPrice(trip.Id).ToString("N0")</strong> دج</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="no-trips">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                </svg>
+                <h3>لا توجد رحلات متاحة حالياً</h3>
+                <p>يرجى التحقق لاحقاً أو التواصل معنا لمزيد من المعلومات</p>
+            </div>
+        }
+    </section>
+
+    <!-- Contact Modal -->
+    @if (showContactModal && selectedTrip != null)
+    {
+        <div class="contact-overlay" @onclick="CloseContact">
+            <div class="contact-card" @onclick:stopPropagation="true">
+                <button class="contact-close" @onclick="CloseContact">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <div class="contact-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                </div>
+                <h2>احجز رحلتك</h2>
+                <p class="contact-trip-name">@selectedTrip.TripName</p>
+                <div class="contact-info">
+                    <div class="contact-item"><span>📞 الهاتف:</span><strong>0550 00 00 00</strong></div>
+                    <div class="contact-item"><span>📧 البريد:</span><strong>info@example.com</strong></div>
+                    <div class="contact-item"><span>📍 العنوان:</span><strong>الجزائر، قسنطينة</strong></div>
+                </div>
+                <button class="contact-btn" @onclick="CloseContact">حسناً</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Trip> allTrips = new();
+    private List<Trip> filteredTrips = new();
+    private string searchQuery = "";
+    private string filterType = "";
+    private bool isLoading = true;
+    private int expandedTripId = 0;
+    private int distinctHotelCount = 0;
+    private Dictionary<int, List<HotelDisplay>> tripHotelsData = new();
+    private bool showContactModal = false;
+    private Trip selectedTrip = null;
+
+    private class HotelDisplay
+    {
+        public string Name { get; set; }
+        public decimal GroupPrice { get; set; }
+        public decimal QuadruplePrice { get; set; }
+        public decimal TriplePrice { get; set; }
+        public decimal DoublePrice { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTrips();
+        distinctHotelCount = tripHotelsData.Values.SelectMany(h => h.Select(x => x.Name)).Distinct().Count();
+    }
+
+    private async Task LoadTrips()
+    {
+        isLoading = true;
+        allTrips = await TripService.GetAllTripsAsync();
+        ApplyFilters();
+        isLoading = false;
+    }
+
+    private void ApplyFilters()
+    {
+        var query = allTrips.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var q = searchQuery.ToLower();
+            query = query.Where(t =>
+                (t.TripNumber?.ToLower().Contains(q) ?? false) ||
+                (t.TripName?.ToLower().Contains(q) ?? false) ||
+                (t.DepartureFrom?.ToLower().Contains(q) ?? false) ||
+                (t.ArrivalTo?.ToLower().Contains(q) ?? false) ||
+                (t.Airline?.ToLower().Contains(q) ?? false) ||
+                (t.Program?.ToLower().Contains(q) ?? false));
+        }
+        if (!string.IsNullOrWhiteSpace(filterType))
+            query = query.Where(t => t.TripType == filterType);
+        filteredTrips = query.OrderByDescending(t => t.DepartureDate).ToList();
+    }
+
+    private void SetFilter(string type) { filterType = type; ApplyFilters(); }
+    private void ClearFilter() { filterType = ""; ApplyFilters(); }
+    private void ClearSearch() { searchQuery = ""; ApplyFilters(); }
+
+    private async Task ToggleHotels(int tripId)
+    {
+        if (expandedTripId == tripId) { expandedTripId = 0; }
+        else
+        {
+            expandedTripId = tripId;
+            if (!tripHotelsData.ContainsKey(tripId))
+            {
+                var hotels = await HotelService.GetHotelsByTripIdAsync(tripId);
+                tripHotelsData[tripId] = hotels.Select(h => new HotelDisplay
+                {
+                    Name = h.Name,
+                    GroupPrice = h.GroupPrice,
+                    QuadruplePrice = h.QuadruplePrice,
+                    TriplePrice = h.TriplePrice,
+                    DoublePrice = h.DoublePrice
+                }).ToList();
+            }
+        }
+    }
+
+    private decimal GetLowestPrice(int tripId)
+    {
+        if (tripHotelsData.ContainsKey(tripId) && tripHotelsData[tripId].Any())
+        {
+            var prices = tripHotelsData[tripId].SelectMany(h => new[] { h.GroupPrice, h.QuadruplePrice, h.TriplePrice, h.DoublePrice }).Where(p => p > 0);
+            return prices.Any() ? prices.Min() : 65000;
+        }
+        return 65000;
+    }
+
+    private void ShowContactInfo(Trip trip) { selectedTrip = trip; showContactModal = true; }
+    private void CloseContact() { showContactModal = false; selectedTrip = null; }
+}

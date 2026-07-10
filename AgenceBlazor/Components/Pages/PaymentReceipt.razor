@@ -1,0 +1,393 @@
+﻿@page "/payment-receipt"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<div class="receipt-wrapper">
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>جاري تحميل الإيصال...</p>
+        </div>
+    }
+    else
+    {
+        <div class="ticket" id="printArea">
+            <!-- Top -->
+            <div class="top-section">
+                <div class="logo-text">خضور</div>
+                <div class="company-name">وكالة خضور للسياحة والعمرة</div>
+            </div>
+
+            <div class="divider">──────────────────────</div>
+
+            <!-- Receipt Info -->
+            <div class="receipt-header">
+                <div class="receipt-type">إيصال دفع</div>
+                <div class="receipt-meta">
+                    <span>@receiptNumber</span>
+                    <span>@receiptDate</span>
+                </div>
+            </div>
+
+            <!-- Agency -->
+            <div class="info-block">
+                <div class="info-label">الوكالة</div>
+                <div class="info-value large">@agencyName</div>
+                <div class="info-sub">@agencyCity</div>
+            </div>
+
+            <div class="divider">──────────────────────</div>
+
+            <!-- Amount Paid -->
+            <div class="payment-block">
+                <div class="payment-label">المبلغ المدفوع</div>
+                <div class="payment-amount">@amount.ToString("N0") <small>دج</small></div>
+                <div class="payment-method">@method</div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(notes))
+            {
+                <div class="notes">@notes</div>
+            }
+
+            <div class="divider">──────────────────────</div>
+
+            <!-- Cachet & Signature -->
+            <div class="stamp-area">
+                <div class="stamp-box">
+                    <div class="stamp-placeholder"></div>
+                    <div class="stamp-label">ختم الوكالة</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-line"></div>
+                    <div class="sig-label">توقيع المستلم</div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-section">
+                <div class="footer-main">شكراً لتعاملكم معنا</div>
+                <div class="footer-sub">س.ت: 123456789 | ض.م: 987654321</div>
+                <div class="footer-sub">031 12 34 56 | قسنطينة</div>
+            </div>
+
+            <div class="divider">──────────────────────</div>
+        </div>
+
+        <div class="no-print">
+            <button class="print-btn" @onclick="PrintReceipt">🖨️ طباعة الإيصال</button>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private string receiptNumber, receiptDate, receiptTime, agencyName, agencyCity, agencyPhone, method, notes;
+    private decimal amount, debtAmount, paidAmount, remainingAmount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var json = await JS.InvokeAsync<string>("sessionStorage.getItem", "receiptData");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var data = System.Text.Json.JsonSerializer.Deserialize<ReceiptData>(json);
+                receiptNumber = data.ReceiptNumber;
+                receiptDate = data.ReceiptDate;
+                receiptTime = data.ReceiptTime;
+                agencyName = data.AgencyName;
+                agencyCity = data.AgencyCity;
+                agencyPhone = data.AgencyPhone;
+                amount = data.Amount;
+                method = data.Method;
+                notes = data.Notes;
+                isLoading = false;
+                StateHasChanged();
+                await JS.InvokeVoidAsync("sessionStorage.removeItem", "receiptData");
+                await Task.Delay(200);
+                await JS.InvokeVoidAsync("print");
+            }
+        }
+    }
+
+    private async Task PrintReceipt() => await JS.InvokeVoidAsync("print");
+
+    private class ReceiptData
+    {
+        public string ReceiptNumber { get; set; }
+        public string ReceiptDate { get; set; }
+        public string ReceiptTime { get; set; }
+        public string AgencyName { get; set; }
+        public string AgencyCity { get; set; }
+        public string AgencyPhone { get; set; }
+        public decimal Amount { get; set; }
+        public string Method { get; set; }
+        public string Notes { get; set; }
+    }
+}
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@400;600;700;800&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .receipt-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 15px;
+        background: #e8e8e8;
+        font-family: 'Tajawal', 'Cairo', sans-serif;
+    }
+
+    .ticket {
+        width: 80mm;
+        background: #fff;
+        padding: 6mm 4mm 4mm 4mm;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+        line-height: 1.5;
+    }
+
+    .top-section {
+        text-align: center;
+        margin-bottom: 2mm;
+    }
+
+    .logo-text {
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: 4px;
+    }
+
+    .company-name {
+        font-size: 9px;
+        font-weight: 700;
+        margin-top: 0.5mm;
+    }
+
+    .divider {
+        text-align: center;
+        font-size: 6px;
+        color: #ccc;
+        margin: 2mm 0;
+    }
+
+    .receipt-header {
+        text-align: center;
+        margin: 2mm 0;
+    }
+
+    .receipt-type {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+    }
+
+    .receipt-meta {
+        display: flex;
+        justify-content: center;
+        gap: 3mm;
+        font-size: 7px;
+        color: #666;
+        margin-top: 0.5mm;
+    }
+
+    .info-block {
+        text-align: center;
+        margin: 2mm 0;
+    }
+
+    .info-label {
+        font-size: 7px;
+        color: #888;
+        letter-spacing: 1px;
+    }
+
+    .info-value {
+        font-weight: 700;
+    }
+
+        .info-value.large {
+            font-size: 10px;
+        }
+
+    .info-sub {
+        font-size: 7px;
+        color: #555;
+    }
+
+    .payment-block {
+        text-align: center;
+        margin: 3mm 0;
+    }
+
+    .payment-label {
+        font-size: 7px;
+        color: #888;
+        letter-spacing: 1px;
+    }
+
+    .payment-amount {
+        font-size: 18px;
+        font-weight: 900;
+        font-family: 'Cairo', monospace;
+    }
+
+        .payment-amount small {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+    .payment-method {
+        font-size: 8px;
+        color: #555;
+        margin-top: 0.5mm;
+    }
+
+    .notes {
+        text-align: center;
+        font-size: 7px;
+        color: #666;
+        font-style: italic;
+        margin: 1mm 0;
+    }
+
+    .stamp-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 3mm;
+        margin: 4mm 0 2mm 0;
+    }
+
+    .stamp-box {
+        text-align: center;
+        flex: 1;
+    }
+
+    .stamp-placeholder {
+        width: 28mm;
+        height: 18mm;
+        border: 1px dashed #999;
+        border-radius: 3px;
+        margin: 0 auto 1mm auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ccc;
+        font-size: 7px;
+    }
+
+        .stamp-placeholder::after {
+            content: 'ختم';
+        }
+
+    .stamp-label {
+        font-size: 6px;
+        color: #888;
+    }
+
+    .sig-box {
+        text-align: left;
+        flex: 1;
+    }
+
+    .sig-line {
+        border-top: 0.5px solid #999;
+        width: 100%;
+        margin-bottom: 0.5mm;
+    }
+
+    .sig-label {
+        font-size: 6px;
+        color: #888;
+    }
+
+    .footer-section {
+        text-align: center;
+    }
+
+    .footer-main {
+        font-size: 8px;
+        font-weight: 600;
+        margin-bottom: 0.5mm;
+    }
+
+    .footer-sub {
+        font-size: 6px;
+        color: #888;
+    }
+
+    @@media print {
+        body {
+            background: #fff;
+        }
+
+        .receipt-wrapper {
+            padding: 0;
+        }
+
+        .ticket {
+            box-shadow: none;
+        }
+
+        .no-print {
+            display: none;
+        }
+    }
+
+    @@page {
+        size: 80mm auto;
+        margin: 0;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 2rem;
+        color: #555;
+    }
+
+    .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #ddd;
+        border-top: 3px solid #1b5e20;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto 0.7rem;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .no-print {
+        margin-top: 1rem;
+    }
+
+    .print-btn {
+        padding: 8px 22px;
+        background: #1b5e20;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+        .print-btn:hover {
+            background: #145214;
+        }
+</style>

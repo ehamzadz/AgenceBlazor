@@ -1,0 +1,45 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="app-container">
+    <NavMenu />
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="greeting">
+                    <span class="greeting-text">@greetingMessage</span>
+                    <span class="greeting-name">مرحباً بك</span>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div class="user-menu">
+                    <div class="user-avatar">م</div>
+                    <div class="user-info">
+                        <span class="user-name">المستخدم</span>
+                        <span class="user-role">مدير</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="page-content">
+            @Body
+        </div>
+    </main>
+</div>
+
+@code {
+    private string greetingMessage
+    {
+        get
+        {
+            var hour = DateTime.Now.Hour;
+            if (hour < 12) return "السلام عليكم ☀️";
+            if (hour < 18) return "السلام عليكم 🌤️";
+            return "السلام عليكم 🌙";
+        }
+    }
+}

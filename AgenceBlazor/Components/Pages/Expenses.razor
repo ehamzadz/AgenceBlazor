@@ -1,0 +1,287 @@
+﻿@page "/expenses"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject ExpenseService ExpenseService
+@inject TripService TripService
+
+<div class="expenses-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">المصاريف</h1>
+                <p class="page-subtitle">إدارة المصاريف والنفقات</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item"><span class="stat-value">@filteredExpenses.Count</span><span class="stat-label">مصروف</span></div>
+            <div class="stat-item"><span class="stat-value">@filteredExpenses.Sum(e => e.Amount).ToString("N0")</span><span class="stat-label">الإجمالي</span></div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث عن مصروف..." @bind="searchQuery" @bind:event="oninput" />
+                <button class="search-clear" @onclick="ClearFilters" style="@(string.IsNullOrEmpty(searchQuery) && string.IsNullOrEmpty(filterCategory) && string.IsNullOrEmpty(filterTripId) && !filterDateFrom.HasValue && !filterDateTo.HasValue ? "display:none" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+            </div>
+            <div class="filter-row">
+                <select class="filter-select" @bind="filterCategory" @bind:event="onchange">
+                    <option value="">جميع الفئات</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat">@cat</option>
+                    }
+                </select>
+                <select class="filter-select" @bind="filterTripId" @bind:event="onchange">
+                    <option value="">جميع الرحلات</option>
+                    @foreach (var trip in trips)
+                    {
+                        <option value="@trip.Id.ToString()">@trip.TripNumber - @trip.TripName</option>
+                    }
+                </select>
+                <input type="date" class="filter-date" @bind="filterDateFrom" @bind:format="yyyy-MM-dd" />
+                <input type="date" class="filter-date" @bind="filterDateTo" @bind:format="yyyy-MM-dd" />
+                <button class="add-btn" @onclick="OpenAddModal" style="white-space:nowrap;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    إضافة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري التحميل...</p></div>
+    }
+    else if (filteredExpenses.Any())
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>التاريخ</th><th>الوصف</th><th>الفئة</th><th>الرحلة</th><th>المبلغ</th><th>إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var exp in filteredExpenses)
+                    {
+                        <tr>
+                            <td>@exp.ExpenseDate.ToString("dd/MM/yyyy")</td>
+                            <td>@exp.Description</td>
+                            <td>@exp.Category</td>
+                            <td>@(exp.TripId.HasValue ? trips.FirstOrDefault(t => t.Id == exp.TripId)?.TripNumber : "-")</td>
+                            <td class="cell-amount">@exp.Amount.ToString("N0") دج</td>
+                            <td class="cell-actions">
+                                <button class="action-btn edit" @onclick="() => OpenEditModal(exp)">✏️</button>
+                                <button class="action-btn delete" @onclick="() => ConfirmDelete(exp)">🗑️</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results"><h3>لا توجد مصاريف</h3></div>
+    }
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header"><h3>@(isEditing ? "تعديل" : "إضافة") مصروف</h3><button class="modal-close" @onclick="CloseModal">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>الوصف</label><input type="text" class="form-input" @bind="formModel.Description" /></div>
+                <div class="form-group"><label>المبلغ</label><input type="number" class="form-input" @bind="formModel.Amount" step="100" min="0" /></div>
+                <div class="form-group">
+                    <label>الفئة</label>
+                    <input type="text" class="form-input" @bind="formModel.Category" list="categoryList" placeholder="اختر أو اكتب الفئة..." />
+                    <datalist id="categoryList">
+                        @foreach (var cat in categories)
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </datalist>
+                </div>
+                <div class="form-group"><label>التاريخ</label><input type="date" class="form-input" @bind="formModel.ExpenseDate" @bind:format="yyyy-MM-dd" /></div>
+                <div class="form-group">
+                    <label>الرحلة</label>
+                    <select class="form-input" @bind="selectedTripId">
+                        <option value="">بدون رحلة</option>
+                        @foreach (var trip in trips)
+                        {
+                            <option value="@trip.Id.ToString()">@trip.TripNumber - @trip.TripName</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group"><label>ملاحظات</label><input type="text" class="form-input" @bind="formModel.Notes" /></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModal">إلغاء</button>
+                <button class="btn-save" @onclick="SaveExpense">💾 حفظ</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteDialog && expenseToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;"><h3 style="color:white;">تأكيد الحذف</h3><button class="modal-close" style="color:white;" @onclick="CancelDelete">✕</button></div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذا المصروف؟</p>
+                <div class="delete-info">
+                    <div class="info-row"><span class="info-label">الوصف:</span><span class="info-value">@expenseToDelete.Description</span></div>
+                    <div class="info-row"><span class="info-label">المبلغ:</span><span class="info-value" style="color:#dc2626;">@expenseToDelete.Amount.ToString("N0") دج</span></div>
+                    <div class="info-row"><span class="info-label">التاريخ:</span><span class="info-value">@expenseToDelete.ExpenseDate.ToString("dd/MM/yyyy")</span></div>
+                </div>
+                <p class="warning-text">لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDelete">إلغاء</button>
+                <button class="btn-delete" @onclick="DeleteExpense">🗑️ حذف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Expense> expenses = new();
+    private List<Expense> filteredExpenses = new();
+    private List<Trip> trips = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditing = false;
+    private Expense formModel = new();
+    private List<string> categories = new();
+    private string selectedTripId = "";
+    private bool showDeleteDialog = false;
+    private Expense expenseToDelete = null;
+
+    // Filters with auto-apply
+    private string _searchQuery = "";
+    private string searchQuery
+    {
+        get => _searchQuery;
+        set { _searchQuery = value; ApplyFilters(); StateHasChanged(); }
+    }
+
+    private string _filterCategory = "";
+    private string filterCategory
+    {
+        get => _filterCategory;
+        set { _filterCategory = value; ApplyFilters(); StateHasChanged(); }
+    }
+
+    private string _filterTripId = "";
+    private string filterTripId
+    {
+        get => _filterTripId;
+        set { _filterTripId = value; ApplyFilters(); StateHasChanged(); }
+    }
+
+    private DateTime? _filterDateFrom = null;
+    private DateTime? filterDateFrom
+    {
+        get => _filterDateFrom;
+        set { _filterDateFrom = value; ApplyFilters(); StateHasChanged(); }
+    }
+
+    private DateTime? _filterDateTo = null;
+    private DateTime? filterDateTo
+    {
+        get => _filterDateTo;
+        set { _filterDateTo = value; ApplyFilters(); StateHasChanged(); }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ExpenseService.GetCategoriesAsync();
+        if (!categories.Any()) categories = new List<string> { "أخرى" };
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        expenses = await ExpenseService.GetAllAsync();
+        trips = await TripService.GetAllTripsAsync();
+        ApplyFilters();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        var query = expenses.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+            query = query.Where(e => (e.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) || (e.Category?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) || (e.Notes?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        if (!string.IsNullOrWhiteSpace(filterCategory))
+            query = query.Where(e => e.Category == filterCategory);
+
+        if (!string.IsNullOrWhiteSpace(filterTripId) && int.TryParse(filterTripId, out var tid))
+            query = query.Where(e => e.TripId == tid);
+
+        if (filterDateFrom.HasValue)
+            query = query.Where(e => e.ExpenseDate >= filterDateFrom.Value);
+
+        if (filterDateTo.HasValue)
+            query = query.Where(e => e.ExpenseDate <= filterDateTo.Value);
+
+        filteredExpenses = query.OrderByDescending(e => e.ExpenseDate).ToList();
+    }
+
+    private void ClearFilters()
+    {
+        _searchQuery = "";
+        _filterCategory = "";
+        _filterTripId = "";
+        _filterDateFrom = null;
+        _filterDateTo = null;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void OpenAddModal() { formModel = new Expense { ExpenseDate = DateTime.Now }; selectedTripId = ""; isEditing = false; showModal = true; }
+    private void OpenEditModal(Expense exp) { formModel = new Expense { Id = exp.Id, Amount = exp.Amount, Description = exp.Description, Category = exp.Category, ExpenseDate = exp.ExpenseDate, TripId = exp.TripId, Notes = exp.Notes }; selectedTripId = exp.TripId?.ToString() ?? ""; isEditing = true; showModal = true; }
+    private void CloseModal() { showModal = false; }
+
+    private async Task SaveExpense()
+    {
+        formModel.TripId = string.IsNullOrEmpty(selectedTripId) ? null : int.Parse(selectedTripId);
+        if (isEditing) await ExpenseService.UpdateAsync(formModel);
+        else await ExpenseService.CreateAsync(formModel);
+        showModal = false;
+        categories = await ExpenseService.GetCategoriesAsync();
+        if (!categories.Any()) categories = new List<string> { "أخرى" };
+        await LoadData();
+    }
+
+    private void ConfirmDelete(Expense exp) { expenseToDelete = exp; showDeleteDialog = true; }
+    private void CancelDelete() { showDeleteDialog = false; expenseToDelete = null; }
+    private async Task DeleteExpense()
+    {
+        if (expenseToDelete == null) return;
+        await ExpenseService.DeleteAsync(expenseToDelete.Id);
+        showDeleteDialog = false; expenseToDelete = null;
+        await LoadData();
+    }
+}

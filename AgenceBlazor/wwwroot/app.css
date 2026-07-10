@@ -1,0 +1,521 @@
+/* ===== Font Imports ===== */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+
+/* Minimalist Modern Design System */
+:root {
+    --green-primary: #10b981;
+    --green-light: #d1fae5;
+    --green-dark: #059669;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --sidebar-width: 260px;
+    /* ===== Arabic Font Family ===== */
+    --font-primary: 'Tajawal', 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-heading: 'Tajawal', 'Amiri', 'Cairo', sans-serif;
+    /* ===== Arabic-Optimized Font Sizes ===== */
+    --font-size-xs: 0.7rem;
+    --font-size-sm: 0.8rem;
+    --font-size-base: 0.95rem;
+    --font-size-md: 1.05rem;
+    --font-size-lg: 1.2rem;
+    --font-size-xl: 1.4rem;
+    --font-size-2xl: 1.8rem;
+    /* ===== Arabic-Optimized Line Heights ===== */
+    --line-height-tight: 1.4;
+    --line-height-base: 1.7;
+    --line-height-relaxed: 1.9;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-primary);
+    background: var(--gray-50);
+    direction: rtl;
+    font-weight: 400;
+    line-height: var(--line-height-base);
+    color: var(--gray-900);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 0;
+}
+
+/* ===== Typography ===== */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    color: var(--gray-900);
+}
+
+h1 {
+    font-size: var(--font-size-2xl);
+}
+
+h2 {
+    font-size: var(--font-size-xl);
+}
+
+h3 {
+    font-size: var(--font-size-lg);
+}
+
+h4 {
+    font-size: var(--font-size-md);
+}
+
+h5, h6 {
+    font-size: var(--font-size-base);
+}
+
+p {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+}
+
+/* App Layout */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Sidebar - Clean & Minimal */
+.sidebar {
+    width: var(--sidebar-width);
+    background: white;
+    border-left: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.sidebar-header {
+    padding: 2rem 1.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand-logo {
+    background: var(--green-light);
+    padding: 8px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--gray-900);
+    font-size: var(--font-size-lg);
+    letter-spacing: -0.3px;
+}
+
+/* Navigation Items */
+.nav-items {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--gray-700);
+    font-family: var(--font-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    letter-spacing: 0;
+}
+
+    .nav-item:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+
+    .nav-item.active {
+        background: var(--green-light);
+        color: var(--green-dark);
+        font-weight: 600;
+    }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--green-primary);
+            border-radius: 3px;
+        }
+
+    .nav-item .badge {
+        background: var(--green-primary);
+        color: white;
+        font-family: var(--font-primary);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 8px;
+        margin-right: auto;
+        font-weight: 600;
+    }
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    margin-right: var(--sidebar-width);
+    min-height: 100vh;
+}
+
+/* Top Bar */
+.top-bar {
+    background: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.greeting-text {
+    font-family: var(--font-primary);
+    color: var(--gray-700);
+    font-weight: 500;
+    font-size: var(--font-size-base);
+}
+
+.top-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.icon-button {
+    color: var(--gray-700) !important;
+}
+
+/* Page Content */
+.page-content {
+    padding: 2rem;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 0.5rem 0;
+}
+
+/* Smooth Transitions */
+.nav-item,
+.icon-button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+    /* Icon Styling */
+    .nav-item .mud-icon-root {
+        opacity: 0.7;
+        font-size: 1.2rem;
+    }
+
+    .nav-item.active .mud-icon-root {
+        opacity: 1;
+        color: var(--green-primary);
+    }
+
+    /* Hover Effects */
+    .nav-item:hover .mud-icon-root {
+        opacity: 1;
+    }
+
+/* ===== Form Elements ===== */
+input,
+select,
+textarea,
+button {
+    font-family: var(--font-primary);
+}
+
+    input::placeholder,
+    textarea::placeholder {
+        font-family: var(--font-primary);
+        font-weight: 400;
+    }
+
+button {
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* ===== Tables ===== */
+table {
+    font-family: var(--font-primary);
+}
+
+th {
+    font-weight: 600;
+}
+
+td {
+    font-weight: 400;
+}
+
+/* ===== Cards ===== */
+.card,
+.mud-card {
+    font-family: var(--font-primary);
+}
+
+.card-title,
+.mud-card-header {
+    font-family: var(--font-heading);
+    font-weight: 700;
+}
+
+/* ===== Modals & Dialogs ===== */
+.mud-dialog-title,
+.modal-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+}
+
+.mud-dialog-content,
+.modal-body {
+    font-family: var(--font-primary);
+    font-weight: 400;
+    line-height: var(--line-height-base);
+}
+
+/* ===== Alerts & Notifications ===== */
+.mud-alert,
+.toast,
+.notification {
+    font-family: var(--font-primary);
+    font-weight: 500;
+}
+
+/* ===== Badges & Chips ===== */
+.mud-chip,
+.badge,
+.tag {
+    font-family: var(--font-primary);
+    font-weight: 500;
+}
+
+/* ===== Tooltips ===== */
+.mud-tooltip {
+    font-family: var(--font-primary);
+    font-weight: 500;
+    font-size: var(--font-size-sm);
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 768px) {
+    :root {
+        --font-size-base: 0.9rem;
+        --font-size-md: 1rem;
+        --font-size-lg: 1.1rem;
+        --font-size-xl: 1.3rem;
+        --font-size-2xl: 1.6rem;
+    }
+
+    .sidebar {
+        width: 72px;
+    }
+
+        .sidebar .brand-name,
+        .sidebar .nav-item span,
+        .sidebar .nav-item .badge {
+            display: none;
+        }
+
+    .sidebar-header {
+        padding: 1.5rem 0.5rem;
+        justify-content: center;
+    }
+
+    .nav-item {
+        justify-content: center;
+        padding: 0.7rem;
+    }
+
+    .main-content {
+        margin-right: 72px;
+    }
+
+    .page-content {
+        padding: 1.5rem;
+    }
+
+    .top-bar {
+        padding: 0.875rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --font-size-base: 0.85rem;
+        --font-size-md: 0.95rem;
+        --font-size-lg: 1.05rem;
+        --font-size-xl: 1.2rem;
+        --font-size-2xl: 1.4rem;
+    }
+
+    .sidebar {
+        width: 100%;
+        bottom: auto;
+        right: 0;
+        left: 0;
+        height: 64px;
+        flex-direction: row;
+        border-left: none;
+        border-top: 1px solid var(--gray-200);
+        top: auto;
+    }
+
+    .sidebar-header,
+    .sidebar-footer {
+        display: none;
+    }
+
+    .nav-items {
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 0;
+        width: 100%;
+    }
+
+    .nav-item {
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .main-content {
+        margin-right: 0;
+        margin-bottom: 64px;
+    }
+
+    .page-content {
+        padding: 1rem;
+    }
+
+    .top-bar {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* ===== Print Styles ===== */
+@media print {
+    body {
+        font-family: var(--font-primary);
+        font-size: 12pt;
+        line-height: 1.6;
+    }
+}
+
+/* ===== Utility Classes ===== */
+.text-arabic {
+    font-family: var(--font-primary);
+    direction: rtl;
+}
+
+.text-heading {
+    font-family: var(--font-heading);
+}
+
+.font-light {
+    font-weight: 300;
+}
+
+.font-regular {
+    font-weight: 400;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-extrabold {
+    font-weight: 800;
+}
+
+/* ===== RTL Specific Adjustments ===== */
+[dir="rtl"] {
+    text-align: right;
+}
+
+    [dir="rtl"] .mud-input {
+        text-align: right;
+    }
+
+    [dir="rtl"] input[type="text"],
+    [dir="rtl"] input[type="search"],
+    [dir="rtl"] input[type="number"],
+    [dir="rtl"] textarea {
+        text-align: right;
+    }
+
+/* Numbers should remain LTR in RTL context */
+input[type="number"],
+.number,
+.phone-number,
+.date {
+    direction: ltr;
+    text-align: left;
+    font-family: 'Cairo', var(--font-primary);
+}
+
+
+.source-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+    .source-badge.bank {
+        background: #ede9fe;
+        color: #5b21b6;
+    }
+
+    .source-badge.cash {
+        background: #fef3c7;
+        color: #92400e;
+    }

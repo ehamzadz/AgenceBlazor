@@ -1,0 +1,416 @@
+﻿@page "/payments"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject PaymentService PaymentService
+@inject AgencyService AgencyService
+@inject IJSRuntime JS
+
+<div class="payments-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">المدفوعات</h1>
+                <p class="page-subtitle">سجل المدفوعات والمعاملات المالية</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@filteredPayments.Count</span>
+                <span class="stat-label">دفعة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredPayments.Sum(p => p.Amount).ToString("N0")</span>
+                <span class="stat-label">الإجمالي</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث عن دفعة..."
+                       @bind="searchQuery" @bind:event="oninput" @onkeydown="HandleKeyDown" />
+                <button class="search-clear" @onclick="ClearSearch" style="@(string.IsNullOrEmpty(searchQuery) ? "display: none;" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <button class="search-btn" @onclick="HandleSearch"><span>بحث</span></button>
+            </div>
+            <div class="filter-row">
+                <select class="filter-select" value="@filterMonth" @onchange="OnMonthChanged">
+                    <option value="">كل الأشهر</option>
+                    <option value="1">يناير</option>
+                    <option value="2">فبراير</option>
+                    <option value="3">مارس</option>
+                    <option value="4">أبريل</option>
+                    <option value="5">ماي</option>
+                    <option value="6">جوان</option>
+                    <option value="7">جويلية</option>
+                    <option value="8">أوت</option>
+                    <option value="9">سبتمبر</option>
+                    <option value="10">أكتوبر</option>
+                    <option value="11">نوفمبر</option>
+                    <option value="12">ديسمبر</option>
+                </select>
+                <select class="filter-select" value="@filterAgencyId" @onchange="OnAgencyChanged">
+                    <option value="">جميع الوكالات</option>
+                    @foreach (var agency in agencies)
+                    {
+                        <option value="@agency.AgencyId">@agency.AgencyName</option>
+                    }
+                </select>
+                <select class="filter-select" value="@filterMethod" @onchange="OnMethodChanged">
+                    <option value="">جميع الطرق</option>
+                    <option value="نقداً">نقداً</option>
+                    <option value="شيك">شيك</option>
+                    <option value="تحويل بنكي">تحويل بنكي</option>
+                    <option value="بريد">بريد</option>
+                </select>
+                <button class="filter-reset" @onclick="ResetFilters">إعادة تعيين</button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري تحميل المدفوعات...</p></div>
+    }
+    else if (filteredPayments.Any())
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الوكالة</th>
+                        <th>المبلغ</th>
+                        <th>الطريقة</th>
+                        <th>ملاحظات</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var payment in filteredPayments)
+                    {
+                        <tr>
+                            <td class="cell-date">
+                                <div class="date-main">@payment.PaymentDate.ToString("dd/MM/yyyy")</div>
+                                <div class="date-time">@payment.CreatedAt.ToString("HH:mm")</div>
+                            </td>
+                            <td class="cell-agency">🏢 @payment.Agency?.AgencyName</td>
+                            <td class="cell-amount">@payment.Amount.ToString("N0") دج</td>
+                            <td class="cell-method">@payment.PaymentMethod</td>
+                            <td class="cell-notes">@payment.Notes</td>
+                            <td class="cell-actions">
+                                <button class="action-btn print" title="إعادة طباعة" @onclick="() => ReprintPayment(payment)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                        <path d="M6 12H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                </button>
+                                <button class="action-btn delete" title="حذف" @onclick="() => DeletePayment(payment)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results">
+            <div class="no-results-icon">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+            </div>
+            <h3>لا توجد مدفوعات</h3>
+            <p>لم يتم العثور على أي مدفوعات</p>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Payment> allPayments = new();
+    private List<Payment> filteredPayments = new();
+    private List<Agency> agencies = new();
+    private string searchQuery = "";
+    private string filterAgencyId = "";
+    private string filterMethod = "";
+    private string filterMonth = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        filterMonth = DateTime.Now.Month.ToString();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            isLoading = true;
+            allPayments = await PaymentService.GetAllAsync();
+            agencies = await AgencyService.GetAllAgenciesAsync();
+            ApplyFilters();
+        }
+        catch { }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = allPayments.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var q = searchQuery.ToLower();
+            query = query.Where(p =>
+                (p.Agency?.AgencyName?.ToLower().Contains(q) ?? false) ||
+                (p.Notes?.ToLower().Contains(q) ?? false));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filterMonth) && int.TryParse(filterMonth, out var month))
+            query = query.Where(p => p.PaymentDate.Month == month && p.PaymentDate.Year == DateTime.Now.Year);
+
+        if (!string.IsNullOrWhiteSpace(filterAgencyId) && Guid.TryParse(filterAgencyId, out var aid))
+            query = query.Where(p => p.AgencyId == aid);
+
+        if (!string.IsNullOrWhiteSpace(filterMethod))
+            query = query.Where(p => p.PaymentMethod == filterMethod);
+
+        filteredPayments = query
+            .OrderByDescending(p => p.PaymentDate)
+            .ThenByDescending(p => p.CreatedAt)
+            .ToList();
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        filterMonth = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task OnAgencyChanged(ChangeEventArgs e)
+    {
+        filterAgencyId = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task OnMethodChanged(ChangeEventArgs e)
+    {
+        filterMethod = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await HandleSearch(); }
+    private async Task HandleSearch() { ApplyFilters(); StateHasChanged(); }
+    private async Task ClearSearch() { searchQuery = ""; ApplyFilters(); }
+    private void ResetFilters()
+    {
+        searchQuery = "";
+        filterAgencyId = "";
+        filterMethod = "";
+        filterMonth = DateTime.Now.Month.ToString();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task ReprintPayment(Payment payment)
+    {
+        var html = $@"<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+<head>
+<meta charset='UTF-8'>
+<title>إيصال دفع</title>
+<style>
+    @@page {{ 
+        margin: 0mm; 
+        size: 80mm auto;
+    }}
+    * {{ 
+        margin: 0; 
+        padding: 0; 
+        box-sizing: border-box; 
+    }}
+    html, body {{ 
+        width: 72mm;
+        max-width: 72mm;
+        overflow-x: hidden;
+    }}
+    body {{ 
+        padding: 2mm 2mm;
+        font-family: 'Tajawal', 'Arial', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #000;
+        background: #fff;
+        direction: rtl;
+        text-align: right;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }}
+    .center {{ text-align: center; }}
+    .bold {{ font-weight: 900; }}
+    .bolder {{ font-weight: 800; }}
+    .line-thick {{ border: none; border-top: 2px solid #000; margin: 3mm 0; }}
+    .line-dash {{ border: none; border-top: 1px dashed #000; margin: 2mm 0; }}
+    .logo {{ font-size: 18px; font-weight: 900; margin-bottom: 1mm; }}
+    .company {{ font-size: 12px; font-weight: 800; margin-bottom: 1mm; }}
+    .title {{ font-size: 16px; font-weight: 900; margin: 4mm 0; }}
+    .date {{ font-size: 11px; font-weight: 600; color: #333; margin-bottom: 2mm; }}
+    .info-row {{ 
+        display: flex; 
+        justify-content: space-between; 
+        margin: 2mm 0; 
+        font-size: 12px;
+        width: 100%;
+        gap: 2mm;
+    }}
+    .info-label {{ font-weight: 600; color: #444; flex-shrink: 0; }}
+    .info-value {{ 
+        font-weight: 800; 
+        text-align: left;
+        word-break: break-word;
+        max-width: 60%;
+    }}
+    .amount-section {{ margin: 4mm 0; }}
+    .amount {{ font-size: 26px; font-weight: 900; }}
+    .currency {{ font-size: 14px; font-weight: 700; }}
+    .method {{ font-size: 12px; font-weight: 700; margin: 2mm 0; }}
+    .notes-box {{ border: 1px dotted #000; padding: 2mm; margin: 3mm 0; width: 100%; }}
+    .notes-label {{ font-size: 10px; font-weight: 600; color: #555; margin-bottom: 1mm; }}
+    .notes-value {{ font-size: 11px; font-weight: 800; word-break: break-word; }}
+    .stamp-area {{ margin: 5mm 0 3mm 0; width: 100%; }}
+    .stamp-row {{ 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: flex-end; 
+        gap: 3mm; 
+        width: 100%;
+    }}
+    .stamp-box {{ width: 24mm; height: 15mm; border: 2px dashed #000; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; font-weight: 800; color: #666; flex-shrink: 0; }}
+    .sign-box {{ flex: 1; min-width: 0; }}
+    .sign-line {{ border-bottom: 1.5px solid #000; height: 12mm; }}
+    .sign-label {{ font-size: 9px; font-weight: 700; color: #666; text-align: center; margin-top: 1mm; }}
+    .footer {{ margin-top: 3mm; }}
+    .footer-main {{ font-size: 11px; font-weight: 800; }}
+    .footer-sub {{ font-size: 9px; font-weight: 600; color: #444; margin-top: 1mm; }}
+    @@media print {{
+        html, body {{ 
+            width: 72mm;
+            max-width: 72mm;
+        }}
+        body {{
+            padding: 2mm 2mm;
+        }}
+        @@page {{
+            margin: 0mm;
+            size: 80mm auto;
+        }}
+    }}
+</style>
+</head>
+<body>
+<div class='center'>
+    <div class='logo bold'>خضور</div>
+    <div class='company'>وكالة خضور للسياحة والعمرة</div>
+</div>
+
+<div class='line-thick'></div>
+
+<div class='center'>
+    <div class='title bold'>إيصال دفع</div>
+    <div class='date'>{payment.PaymentDate:dd/MM/yyyy}</div>
+</div>
+
+<div class='line-dash'></div>
+
+<div class='info-row'>
+    <span class='info-label'>الوكالة:</span>
+    <span class='info-value'>{payment.Agency?.AgencyName}</span>
+</div>
+<div class='info-row'>
+    <span class='info-label'>المدينة:</span>
+    <span class='info-value'>{payment.Agency?.City}</span>
+</div>
+
+<div class='line-thick'></div>
+
+<div class='center amount-section'>
+    <span class='amount bold'>{payment.Amount:N0}</span>
+    <span class='currency'> دج</span>
+</div>
+<div class='center method'>طريقة الدفع: <span class='bolder'>{payment.PaymentMethod}</span></div>
+
+{(string.IsNullOrEmpty(payment.Notes) ? "" : $@"
+<div class='line-dash'></div>
+<div class='center notes-box'>
+    <div class='notes-label'>ملاحظة</div>
+    <div class='notes-value'>{payment.Notes}</div>
+</div>
+")}
+
+<div class='line-thick'></div>
+
+<div class='stamp-area'>
+    <div class='stamp-row'>
+        <div class='stamp-box'>
+            <span>ختم<br/>الوكالة</span>
+        </div>
+        <div class='sign-box'>
+            <div class='sign-line'></div>
+            <div class='sign-label'>توقيع المستلم</div>
+        </div>
+    </div>
+</div>
+
+<div class='line-thick'></div>
+
+<div class='center footer'>
+    <div class='footer-main bold'>شكراً لتعاملكم معنا</div>
+    <div class='footer-sub'>📞 031 12 34 56 | 📍 برج بوعريريج</div>
+</div>
+
+<script>
+window.onload = function() {{
+    window.print();
+    setTimeout(function() {{ window.close(); }}, 500);
+}};
+</script>
+</body>
+</html>";
+
+        await JS.InvokeVoidAsync("printReceiptText", html);
+    }
+
+    private async Task DeletePayment(Payment payment) { }
+}

@@ -1,0 +1,102 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+
+<nav class="sidebar">
+    <div class="sidebar-header">
+        <div class="brand-logo">
+            <MudIcon Icon="@Icons.Material.Rounded.Hexagon" Size="Size.Large" Color="Color.Success" />
+        </div>
+        <MudText Typo="Typo.subtitle1" Class="brand-name">منصتي</MudText>
+    </div>
+
+    <div class="nav-items nav-items-scroll">
+        <NavLink href="/" class="nav-item" ActiveClass="active" Match="NavLinkMatch.All">
+            <MudIcon Icon="@Icons.Material.Rounded.GridView" Size="Size.Small" />
+            <span>الرئيسية</span>
+        </NavLink>
+
+        <NavLink href="/TripsGallery" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Airlines" Size="Size.Small" />
+            <span>الرحلات</span>
+        </NavLink>
+
+        <NavLink href="/addtrips" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.AirlineSeatReclineExtra" Size="Size.Small" />
+            <span>اضافة رحلة</span>
+        </NavLink>
+
+        <NavLink href="/agencies" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Work" Size="Size.Small" />
+            <span>الوكالات</span>
+        </NavLink>
+
+        <NavLink href="/addagency" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Workspaces" Size="Size.Small" />
+            <span>اضافة وكالة</span>
+        </NavLink>
+
+        <NavLink href="/agency-bookings" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Receipt" Size="Size.Small" />
+            <span>حجوزات الوكالات</span>
+        </NavLink>
+
+        <NavLink href="/direct-pilgrims" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.PeopleAlt" Size="Size.Small" />
+            <span>المعتمرون المباشرون</span>
+        </NavLink>
+
+        <NavLink href="/payments" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Payments" Size="Size.Small" />
+            <span>المدفوعات</span>
+        </NavLink>
+
+        <NavLink href="/expenses" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.MoneyOff" Size="Size.Small" />
+            <span>المصاريف</span>
+        </NavLink>
+
+        <NavLink href="/treasury" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Size="Size.Small" />
+            <span>الخزينة</span>
+        </NavLink>
+        
+        <NavLink href="/owner-treasury" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.AccountBalanceWallet" Size="Size.Small" />
+            <span>خزينة المالك</span>
+        </NavLink>
+
+        <NavLink href="/hotels-info" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Hotel" Size="Size.Small" />
+            <span>الفنادق</span>
+        </NavLink>
+
+        <NavLink href="/hotels-management" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.Hotel" Size="Size.Small" />
+            <span>إدارة الفنادق</span>
+        </NavLink>
+
+        @* <NavLink href="/messages" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.ChatBubbleOutline" Size="Size.Small" />
+            <span>الرسائل</span>
+            <span class="badge">3</span>
+        </NavLink>
+
+        <NavLink href="/calendar" class="nav-item" ActiveClass="active">
+            <MudIcon Icon="@Icons.Material.Rounded.CalendarToday" Size="Size.Small" />
+            <span>التقويم</span>
+        </NavLink> *@
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="nav-items">
+            <NavLink href="/settings" class="nav-item" ActiveClass="active">
+                <MudIcon Icon="@Icons.Material.Rounded.Settings" Size="Size.Small" />
+                <span>الإعدادات</span>
+            </NavLink>
+
+            <NavLink href="/logout" class="nav-item" ActiveClass="active">
+                <MudIcon Icon="@Icons.Material.Rounded.Logout" Size="Size.Small" />
+                <span>تسجيل الخروج</span>
+            </NavLink>
+        </div>
+    </div>
+</nav>

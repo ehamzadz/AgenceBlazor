@@ -1,0 +1,272 @@
+﻿@page "/hotels-info"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject HotelInfoService HotelInfoService
+@inject IJSRuntime JS
+
+<div class="hotels-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M3 21h18"></path>
+                    <path d="M3 7v14h18V7l-9-5-9 5z"></path>
+                    <path d="M9 21v-8h6v8"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">الفنادق</h1>
+                <p class="page-subtitle">إدارة الفنادق المتعاقد معها</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@hotels.Count</span>
+                <span class="stat-label">فندق</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@hotels.Count(h => h.IsActive)</span>
+                <span class="stat-label">نشط</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Button -->
+    <div style="margin-bottom: 1.5rem;">
+        <button class="add-btn" @onclick="OpenAddModal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            إضافة فندق
+        </button>
+    </div>
+
+    <!-- Hotels Table -->
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري تحميل الفنادق...</p></div>
+    }
+    else if (hotels.Any())
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>اسم الفندق</th>
+                        <th>المكان</th>
+                        <th>البعد عن الحرم</th>
+                        <th>اسم العميل</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var hotel in hotels)
+                    {
+                        <tr>
+                            <td class="cell-name">🏨 @hotel.Name</td>
+                            <td>@hotel.Location</td>
+                            <td>@hotel.DistanceFromHaram</td>
+                            <td>@hotel.ClientName</td>
+                            <td>
+                                <span class="status-badge @(hotel.IsActive ? "active" : "inactive")">
+                                    @(hotel.IsActive ? "نشط" : "غير نشط")
+                                </span>
+                            </td>
+                            <td class="cell-actions">
+                                <button class="action-btn edit" title="تعديل" @onclick="() => OpenEditModal(hotel)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <button class="action-btn delete" title="حذف" @onclick="() => ConfirmDelete(hotel)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results">
+            <div class="no-results-icon">🏨</div>
+            <h3>لا توجد فنادق</h3>
+            <p>لم يتم إضافة أي فنادق بعد</p>
+        </div>
+    }
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(isEditing ? "تعديل فندق" : "إضافة فندق")</h3>
+                <button class="modal-close" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">اسم الفندق</label>
+                    <input type="text" class="form-input" @bind="formModel.Name" placeholder="أدخل اسم الفندق" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">المكان</label>
+                    <input type="text" class="form-input" @bind="formModel.Location" placeholder="مكة / المدينة" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">البعد عن الحرم</label>
+                    <input type="text" class="form-input" @bind="formModel.DistanceFromHaram" placeholder="مثال: 500 متر" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">اسم العميل</label>
+                    <input type="text" class="form-input" @bind="formModel.ClientName" placeholder="اسم العميل" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModal" disabled="@isSaving">إلغاء</button>
+                <button class="btn-save" @onclick="SaveHotel" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation -->
+@if (showDeleteDialog && hotelToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;">
+                <h3 style="color:white;">تأكيد الحذف</h3>
+                <button class="modal-close" style="color:white;" @onclick="CancelDelete">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف فندق <strong>@hotelToDelete.Name</strong>؟</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDelete">إلغاء</button>
+                <button class="btn-delete" @onclick="DeleteHotel">🗑️ حذف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showToast)
+{
+    <div class="toast @(toastSuccess ? "toast-success" : "toast-error")">
+        <span>@toastMessage</span>
+        <button class="toast-close" @onclick="() => showToast = false">✕</button>
+    </div>
+}
+
+@code {
+    private List<HotelInfo> hotels = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private HotelInfo formModel = new();
+    private bool showDeleteDialog = false;
+    private HotelInfo hotelToDelete = null;
+    private bool showToast = false;
+    private bool toastSuccess = false;
+    private string toastMessage = "";
+
+    protected override async Task OnInitializedAsync() => await LoadHotels();
+
+    private async Task LoadHotels()
+    {
+        try
+        {
+            isLoading = true;
+            hotels = await HotelInfoService.GetAllAsync();
+        }
+        catch { }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private void OpenAddModal()
+    {
+        formModel = new HotelInfo();
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void OpenEditModal(HotelInfo hotel)
+    {
+        formModel = new HotelInfo { Id = hotel.Id, Name = hotel.Name, Location = hotel.Location, DistanceFromHaram = hotel.DistanceFromHaram, ClientName = hotel.ClientName };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void CloseModal() { if (!isSaving) { showModal = false; formModel = new(); } }
+
+    private async Task SaveHotel()
+    {
+        try
+        {
+            isSaving = true; StateHasChanged();
+            bool success;
+            if (isEditing)
+                success = await HotelInfoService.UpdateAsync(formModel);
+            else
+                success = await HotelInfoService.CreateAsync(formModel);
+
+            if (success)
+            {
+                ShowToast(true, isEditing ? "تم تعديل الفندق" : "تم إضافة الفندق");
+                showModal = false; formModel = new();
+                await LoadHotels();
+            }
+            else ShowToast(false, "فشلت العملية");
+        }
+        catch { ShowToast(false, "حدث خطأ"); }
+        finally { isSaving = false; StateHasChanged(); }
+    }
+
+    private void ConfirmDelete(HotelInfo hotel) { hotelToDelete = hotel; showDeleteDialog = true; }
+    private void CancelDelete() { showDeleteDialog = false; hotelToDelete = null; }
+
+    private async Task DeleteHotel()
+    {
+        if (hotelToDelete == null) return;
+        try
+        {
+            var success = await HotelInfoService.DeleteAsync(hotelToDelete.Id);
+            if (success)
+            {
+                ShowToast(true, "تم حذف الفندق");
+                showDeleteDialog = false; hotelToDelete = null;
+                await LoadHotels();
+            }
+            else ShowToast(false, "فشل الحذف");
+        }
+        catch { ShowToast(false, "حدث خطأ"); }
+    }
+
+    private void ShowToast(bool success, string msg)
+    {
+        toastSuccess = success; toastMessage = msg; showToast = true;
+        _ = Task.Run(async () => { await Task.Delay(3000); showToast = false; await InvokeAsync(StateHasChanged); });
+    }
+}

@@ -1,0 +1,161 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager Navigation
+@layout AgenceBlazor.Components.Layout.EmptyLayout
+
+<div class="auth-page" dir="rtl">
+    <div class="auth-container">
+        <!-- Brand Panel -->
+        <div class="auth-brand">
+            <div class="brand-overlay"></div>
+            <div class="brand-info">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                </div>
+                <h1>وكالة خضور</h1>
+                <p>للسياحة والعمرة</p>
+                <div class="brand-list">
+                    <div><span>✓</span> إدارة الرحلات</div>
+                    <div><span>✓</span> متابعة الوكالات</div>
+                    <div><span>✓</span> تقارير مالية</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Panel -->
+        <div class="auth-form">
+            <div class="auth-form-wrap">
+                <div class="auth-form-top">
+                    <h2>تسجيل الدخول</h2>
+                    <p>أدخل بياناتك للوصول إلى لوحة التحكم</p>
+                </div>
+
+                <EditForm Model="@model" OnValidSubmit="@HandleLogin">
+                    <DataAnnotationsValidator />
+
+                    @if (hasError)
+                    {
+                        <div class="auth-error">
+                            <span>⚠</span>
+                            <span>@errorText</span>
+                        </div>
+                    }
+
+                    <div class="auth-field">
+                        <label>اسم المستخدم</label>
+                        <div class="auth-field-input">
+                            <span class="auth-field-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                            </span>
+                            <InputText @bind-Value="model.Username" placeholder="أدخل اسم المستخدم" autocomplete="username" />
+                        </div>
+                        <ValidationMessage For="() => model.Username" />
+                    </div>
+
+                    <div class="auth-field">
+                        <label>كلمة المرور</label>
+                        <div class="auth-field-input">
+                            <span class="auth-field-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </span>
+                            <InputText type="@(showPassword ? "text" : "password")" @bind-Value="model.Password" placeholder="أدخل كلمة المرور" autocomplete="current-password" />
+                            <button type="button" class="auth-toggle-pass" @onclick="TogglePassword" tabindex="-1">
+                                @if (showPassword)
+                                {
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                }
+                            </button>
+                        </div>
+                        <ValidationMessage For="() => model.Password" />
+                    </div>
+
+                    <div class="auth-field-options">
+                        <label class="auth-remember">
+                            <input type="checkbox" @bind="remember" />
+                            <span>تذكرني</span>
+                        </label>
+                        <a href="#" class="auth-forgot">نسيت كلمة المرور؟</a>
+                    </div>
+
+                    <button type="submit" class="auth-submit-btn" disabled="@loading">
+                        @if (loading)
+                        {
+                            <span class="auth-spinner"></span>
+                            <span>جاري الدخول...</span>
+                        }
+                        else
+                        {
+                            <span>دخول</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                <polyline points="10 17 15 12 10 7" />
+                                <line x1="15" y1="12" x2="3" y2="12" />
+                            </svg>
+                        }
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel model = new();
+    private bool loading = false;
+    private bool remember = false;
+    private bool hasError = false;
+    private bool showPassword = false;
+    private string errorText = "";
+
+    private void TogglePassword() => showPassword = !showPassword;
+
+    private async Task HandleLogin()
+    {
+        hasError = false;
+
+        if (model.Username == "admin" && model.Password == "admin123")
+        {
+            loading = true;
+            await Task.Delay(500);
+            Navigation.NavigateTo("/TripsGallery");
+        }
+        else
+        {
+            hasError = true;
+            errorText = "اسم المستخدم أو كلمة المرور غير صحيحة";
+        }
+    }
+
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "اسم المستخدم مطلوب")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
+        [MinLength(6, ErrorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل")]
+        public string Password { get; set; } = "";
+    }
+
+    
+}

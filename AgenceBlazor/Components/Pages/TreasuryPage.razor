@@ -1,0 +1,385 @@
+﻿@page "/treasury"
+@rendermode InteractiveServer
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject TreasuryService TreasuryService
+
+<div class="expenses-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <line x1="12" y1="9" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">الخزينة</h1>
+                <p class="page-subtitle">إدارة التدفقات المالية</p>
+            </div>
+        </div>
+        @* <div class="header-stats">
+            <div class="stat-item"><span class="stat-value">@balance.ToString("N0")</span><span class="stat-label">الرصيد</span></div>
+            <div class="stat-item"><span class="stat-value">@depositsTotal.ToString("N0")</span><span class="stat-label">إيداعات</span></div>
+            <div class="stat-item"><span class="stat-value">@withdrawalsTotal.ToString("N0")</span><span class="stat-label">مسحوبات</span></div>
+            <div class="stat-item"><span class="stat-value">@expensesTotal.ToString("N0")</span><span class="stat-label">مصاريف</span></div>
+        </div> *@
+        <div class="header-stats">
+            <div class="stat-item" style="background: #dbeafe;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2" class="stat-icon-svg">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                    <path d="M12 18V6" />
+                </svg>
+                <span class="stat-value">@balance.ToString("N0")</span>
+                <span class="stat-label">الرصيد</span>
+            </div>
+            <div class="stat-item" style="background: #ecfdf5;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="2" class="stat-icon-svg">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <polyline points="19 12 12 19 5 12"></polyline>
+                </svg>
+                <span class="stat-value">@depositsTotal.ToString("N0")</span>
+                <span class="stat-label">إيداعات</span>
+            </div>
+            <div class="stat-item" style="background: #fef2f2;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2" class="stat-icon-svg">
+                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                    <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+                <span class="stat-value">@withdrawalsTotal.ToString("N0")</span>
+                <span class="stat-label">مسحوبات</span>
+            </div>
+            <div class="stat-item" style="background: #fff7ed;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2" class="stat-icon-svg">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span class="stat-value">@expensesTotal.ToString("N0")</span>
+                <span class="stat-label">مصاريف</span>
+            </div>
+            <div class="stat-item" style="background: #f5f3ff;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b21b6" stroke-width="2" class="stat-icon-svg">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span class="stat-value">@transferFromOwnerTotal.ToString("N0")</span>
+                <span class="stat-label">تمويل من المالك</span>
+            </div>
+            <div class="stat-item" style="background: #eff6ff;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2" class="stat-icon-svg">
+                    <line x1="2" y1="2" x2="13" y2="13"></line>
+                    <polygon points="2 2 9 22 13 13 22 9 2 2"></polygon>
+                </svg>
+                <span class="stat-value">@transferToOwnerTotal.ToString("N0")</span>
+                <span class="stat-label">تحويلات للمالك</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث..." @bind="searchQuery" @bind:event="oninput" />
+                <button class="search-clear" @onclick="ClearFilters" style="@(string.IsNullOrEmpty(searchQuery) && string.IsNullOrEmpty(filterType) && !filterDateFrom.HasValue && !filterDateTo.HasValue ? "display:none" : "")">
+                    ✕
+                </button>
+            </div>
+            <div class="filter-row">
+                <select class="filter-select" @bind="filterType" @bind:event="onchange">
+                    <option value="">جميع الأنواع</option>
+                    <option value="deposit">إيداع</option>
+                    <option value="withdrawal">سحب</option>
+                    <option value="expense">مصروف</option>
+                    <option value="transfer_from_owner">تمويل من المالك</option>
+                    <option value="transfer_to_owner">تحويل للمالك</option>
+                </select>
+                <input type="date" class="filter-date" @bind="filterDateFrom" @bind:format="yyyy-MM-dd" />
+                <input type="date" class="filter-date" @bind="filterDateTo" @bind:format="yyyy-MM-dd" />
+                <button class="add-btn" @onclick='() => OpenAddModal("deposit")' style="background:#059669;">إيداع</button>
+                <button class="add-btn" @onclick='() => OpenAddModal("withdrawal")' style="background:#dc2626;">سحب</button>
+                <button class="add-btn" @onclick="OpenTransferToOwnerModal" style="background:#7c3aed;">⬅️ تحويل للمالك</button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري التحميل...</p></div>
+    }
+    else if (filteredTransactions.Any())
+    {
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>التاريخ</th><th>النوع</th><th>الوصف</th><th>المبلغ</th><th>ملاحظات</th><th>إجراءات</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in filteredTransactions)
+                    {
+                        <tr>
+                            <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <span class="type-badge @t.Type">
+                                    @(t.Type == "deposit" ? "إيداع" :
+                                      t.Type == "withdrawal" ? "سحب" :
+                                      t.Type == "expense" ? "مصروف" :
+                                      t.Type == "transfer_from_owner" ? "تمويل من المالك" :
+                                      t.Type == "transfer_to_owner" ? "تحويل للمالك" : t.Type)
+                                </span>
+                            </td>
+                            <td>@t.Description</td>
+                            <td class="cell-amount @(t.Type == "deposit" || t.Type == "transfer_from_owner" ? "deposit" : "withdrawal")">
+                                @(t.Type == "deposit" || t.Type == "transfer_from_owner" ? "+" : "-") @t.Amount.ToString("N0") دج
+                            </td>
+                            <td>@t.Notes</td>
+                            <td class="cell-actions"><button class="action-btn delete" @onclick="() => ConfirmDelete(t)">🗑️</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results"><h3>لا توجد معاملات</h3></div>
+    }
+</div>
+
+<!-- Add Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header"><h3>@(formType == "deposit" ? "إيداع" : "سحب")</h3><button class="modal-close" @onclick="CloseModal">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>الوصف</label><input type="text" class="form-input" @bind="formModel.Description" /></div>
+                <div class="form-group"><label>المبلغ</label><input type="number" class="form-input" @bind="formModel.Amount" step="100" min="0" /></div>
+                <div class="form-group"><label>التاريخ</label><input type="date" class="form-input" @bind="formModel.TransactionDate" @bind:format="yyyy-MM-dd" /></div>
+                <div class="form-group"><label>ملاحظات</label><input type="text" class="form-input" @bind="formModel.Notes" /></div>
+            </div>
+            <div class="modal-footer"><button class="btn-cancel" @onclick="CloseModal">إلغاء</button><button class="btn-save" @onclick="SaveTransaction">💾 حفظ</button></div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation -->
+@if (showDeleteDialog && transactionToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;"><h3 style="color:white;">تأكيد الحذف</h3><button class="modal-close" style="color:white;" @onclick="CancelDelete">✕</button></div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذه المعاملة؟</p>
+                <div class="delete-info">
+                    <div class="info-row"><span>الوصف:</span><span>@transactionToDelete.Description</span></div>
+                    <div class="info-row"><span>المبلغ:</span><span>@transactionToDelete.Amount.ToString("N0") دج</span></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn-cancel" @onclick="CancelDelete">إلغاء</button><button class="btn-delete" @onclick="DeleteTransaction">🗑️ حذف</button></div>
+        </div>
+    </div>
+}
+
+<!-- Transfer to Owner Modal -->
+@if (showTransferToOwnerModal)
+{
+    <div class="modal-overlay" @onclick="CloseTransferToOwnerModal">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background: #7c3aed;">
+                <h3 style="color: white;">تحويل للمالك</h3>
+                <button class="modal-close" style="color: white;" @onclick="CloseTransferToOwnerModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>الوجهة</label>
+                    <select class="form-input" @bind="transferToOwnerSource">
+                        <option value="bank">🏦 إلى بنك المالك</option>
+                        <option value="cash">💵 إلى نقد المالك</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>المبلغ</label>
+                    <input type="number" class="form-input" @bind="transferToOwnerAmount" step="100" min="0" />
+                </div>
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <input type="text" class="form-input" @bind="transferToOwnerDescription" />
+                </div>
+                <div class="form-group">
+                    <label>التاريخ</label>
+                    <input type="date" class="form-input" @bind="transferToOwnerDate" @bind:format="yyyy-MM-dd" />
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات</label>
+                    <input type="text" class="form-input" @bind="transferToOwnerNotes" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseTransferToOwnerModal">إلغاء</button>
+                <button class="btn-save" @onclick="ExecuteTransferToOwner">💾 تحويل</button>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<TreasuryTransaction> transactions = new();
+    private List<TreasuryTransaction> filteredTransactions = new();
+    private bool isLoading = true;
+    private decimal balance = 0, depositsTotal = 0, withdrawalsTotal = 0, expensesTotal = 0;
+    private bool showModal = false;
+    private string formType = "deposit";
+    private TreasuryTransaction formModel = new();
+    private bool showDeleteDialog = false;
+    private TreasuryTransaction transactionToDelete = null;
+
+    // Filters
+    private string _searchQuery = "";
+    private string searchQuery { get => _searchQuery; set { _searchQuery = value; ApplyFilters(); } }
+    private string _filterType = "";
+    private string filterType { get => _filterType; set { _filterType = value; ApplyFilters(); } }
+    private DateTime? _filterDateFrom = null;
+    private DateTime? filterDateFrom { get => _filterDateFrom; set { _filterDateFrom = value; ApplyFilters(); } }
+    private DateTime? _filterDateTo = null;
+    private DateTime? filterDateTo { get => _filterDateTo; set { _filterDateTo = value; ApplyFilters(); } }
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        transactions = await TreasuryService.GetAllAsync();
+        // Get overall totals from DB (not filtered)
+        balance = await TreasuryService.GetBalanceAsync();
+        depositsTotal = await TreasuryService.GetDepositsTotalAsync();
+        withdrawalsTotal = await TreasuryService.GetWithdrawalsTotalAsync();
+        expensesTotal = await TreasuryService.GetExpensesTotalAsync();
+        ApplyFilters(); // This will override stats with filtered data
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    // private void ApplyFilters()
+    // {
+    //     var query = transactions.AsEnumerable();
+    //     if (!string.IsNullOrWhiteSpace(searchQuery))
+    //         query = query.Where(t => (t.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) || (t.Notes?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+    //     if (!string.IsNullOrWhiteSpace(filterType))
+    //         query = query.Where(t => t.Type == filterType);
+    //     if (filterDateFrom.HasValue)
+    //         query = query.Where(t => t.TransactionDate >= filterDateFrom.Value);
+    //     if (filterDateTo.HasValue)
+    //         query = query.Where(t => t.TransactionDate <= filterDateTo.Value);
+
+    //     filteredTransactions = query.OrderByDescending(t => t.TransactionDate).ToList();
+
+    //     Update stats from filtered data
+    //     depositsTotal = filteredTransactions.Where(t => t.Type == "deposit").Sum(t => t.Amount);
+    //     var w = filteredTransactions.Where(t => t.Type == "withdrawal").Sum(t => t.Amount);
+    //     depositsTotal = filteredTransactions.Where(t => t.Type == "deposit" || t.Type == "transfer_from_owner").Sum(t => t.Amount);
+    //     var w = filteredTransactions.Where(t => t.Type == "withdrawal" || t.Type == "transfer_to_owner").Sum(t => t.Amount);
+    //     var e = filteredTransactions.Where(t => t.Type == "expense").Sum(t => t.Amount);
+    //     withdrawalsTotal = w + e;
+    //     expensesTotal = e;
+    //     balance = depositsTotal - withdrawalsTotal;
+
+    //     StateHasChanged();
+    // }
+    private decimal transferFromOwnerTotal = 0;
+    private decimal transferToOwnerTotal = 0;
+
+    private void ApplyFilters()
+    {
+        var query = transactions.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+            query = query.Where(t => (t.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) || (t.Notes?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+        if (!string.IsNullOrWhiteSpace(filterType))
+            query = query.Where(t => t.Type == filterType);
+        if (filterDateFrom.HasValue)
+            query = query.Where(t => t.TransactionDate >= filterDateFrom.Value);
+        if (filterDateTo.HasValue)
+            query = query.Where(t => t.TransactionDate <= filterDateTo.Value);
+
+        filteredTransactions = query.OrderByDescending(t => t.TransactionDate).ToList();
+
+        // Update stats from filtered data
+        depositsTotal = filteredTransactions.Where(t => t.Type == "deposit" || t.Type == "transfer_from_owner").Sum(t => t.Amount);
+        var w = filteredTransactions.Where(t => t.Type == "withdrawal" || t.Type == "transfer_to_owner").Sum(t => t.Amount);
+        var e = filteredTransactions.Where(t => t.Type == "expense").Sum(t => t.Amount);
+        withdrawalsTotal = w + e;
+        expensesTotal = e;
+        balance = depositsTotal - withdrawalsTotal;
+
+        // NEW: Transfer totals
+        transferFromOwnerTotal = filteredTransactions.Where(t => t.Type == "transfer_from_owner").Sum(t => t.Amount);
+        transferToOwnerTotal = filteredTransactions.Where(t => t.Type == "transfer_to_owner").Sum(t => t.Amount);
+
+        StateHasChanged();
+    }
+
+    private void ClearFilters() { _searchQuery = ""; _filterType = ""; _filterDateFrom = null; _filterDateTo = null; ApplyFilters(); }
+
+    private void OpenAddModal(string type)
+    {
+        formType = type;
+        formModel = new TreasuryTransaction
+        {
+            Type = type,
+            TransactionDate = DateTime.UtcNow  // Changed from DateTime.Now
+        };
+        showModal = true;
+    }
+    // private void OpenAddModal(string type) { formType = type; formModel = new TreasuryTransaction { Type = type, TransactionDate = DateTime.Now }; showModal = true; }
+    private void CloseModal() { showModal = false; }
+    private async Task SaveTransaction() { formModel.Type = formType; await TreasuryService.CreateAsync(formModel); showModal = false; await LoadData(); }
+    private void ConfirmDelete(TreasuryTransaction t) { transactionToDelete = t; showDeleteDialog = true; }
+    private void CancelDelete() { showDeleteDialog = false; transactionToDelete = null; }
+    private async Task DeleteTransaction() { if (transactionToDelete == null) return; await TreasuryService.DeleteAsync(transactionToDelete.Id); showDeleteDialog = false; transactionToDelete = null; await LoadData(); }
+
+
+    // Add these new variables
+    private bool showTransferToOwnerModal = false;
+    private string transferToOwnerSource = "bank";
+    private decimal transferToOwnerAmount;
+    private string transferToOwnerDescription = "";
+    private DateTime transferToOwnerDate = DateTime.UtcNow;
+    private string transferToOwnerNotes = "";
+
+    // Add these methods
+    private void OpenTransferToOwnerModal()
+    {
+        transferToOwnerAmount = 0;
+        transferToOwnerDescription = "";
+        transferToOwnerDate = DateTime.UtcNow;
+        transferToOwnerNotes = "";
+        showTransferToOwnerModal = true;
+    }
+
+    private void CloseTransferToOwnerModal() => showTransferToOwnerModal = false;
+
+    private async Task ExecuteTransferToOwner()
+    {
+        bool success;
+        if (transferToOwnerSource == "bank")
+            success = await TreasuryService.TransferFromMainToOwnerBank(
+                transferToOwnerAmount, transferToOwnerDescription, transferToOwnerDate, transferToOwnerNotes);
+        else
+            success = await TreasuryService.TransferFromMainToOwnerCash(
+                transferToOwnerAmount, transferToOwnerDescription, transferToOwnerDate, transferToOwnerNotes);
+
+        if (success)
+        {
+            showTransferToOwnerModal = false;
+            await LoadData();
+        }
+    }
+
+
+
+}

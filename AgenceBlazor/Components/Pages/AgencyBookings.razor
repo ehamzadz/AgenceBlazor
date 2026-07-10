@@ -1,0 +1,496 @@
+﻿@page "/agency-bookings"
+@rendermode InteractiveServer
+@using System.Globalization
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject AgencyBookingService AgencyBookingService
+@inject TripService TripService
+@inject AgencyService AgencyService
+@inject IJSRuntime JS
+
+<div class="bookings-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">حجوزات الوكالات</h1>
+                <p class="page-subtitle">سجل حجوزات الوكالات والمعاملات المالية</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Count</span>
+                <span class="stat-label">حجز</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.TotalPilgrims)</span>
+                <span class="stat-label">معتمر</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.TotalAmount).ToString("N0")</span>
+                <span class="stat-label">الإجمالي</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.Commission).ToString("N0")</span>
+                <span class="stat-label">العمولة</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.NetProfit).ToString("N0")</span>
+                <span class="stat-label">الصافي</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </div>
+                <input type="text" class="search-input" placeholder="ابحث عن حجز..."
+                       @bind="searchQuery" @bind:event="oninput" @onkeydown="HandleKeyDown" />
+                <button class="search-clear" @onclick="ClearSearch" style="@(string.IsNullOrEmpty(searchQuery) ? "display: none;" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <button class="search-btn" @onclick="HandleSearch"><span>بحث</span></button>
+            </div>
+            <div class="filter-row">
+                <select class="filter-select" value="@filterMonth" @onchange="OnMonthChanged">
+                    <option value="">كل الأشهر</option>
+                    <option value="1">يناير</option>
+                    <option value="2">فبراير</option>
+                    <option value="3">مارس</option>
+                    <option value="4">أبريل</option>
+                    <option value="5">ماي</option>
+                    <option value="6">جوان</option>
+                    <option value="7">جويلية</option>
+                    <option value="8">أوت</option>
+                    <option value="9">سبتمبر</option>
+                    <option value="10">أكتوبر</option>
+                    <option value="11">نوفمبر</option>
+                    <option value="12">ديسمبر</option>
+                </select>
+                <select class="filter-select" value="@filterTripId" @onchange="OnTripChanged">
+                    <option value="">جميع الرحلات</option>
+                    @foreach (var trip in trips)
+                    {
+                        <option value="@trip.Id">@trip.TripNumber - @trip.TripName</option>
+                    }
+                </select>
+                <select class="filter-select" value="@filterAgency" @onchange="OnAgencyFilterChanged">
+                    <option value="">جميع الوكالات</option>
+                    @foreach (var agency in agencies)
+                    {
+                        <option value="@agency.AgencyName">@agency.AgencyName</option>
+                    }
+                </select>
+                <button class="filter-reset" @onclick="ResetFilters">إعادة تعيين</button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div><p>جاري تحميل الحجوزات...</p></div>
+    }
+    else if (filteredBookings.Any())
+    {
+        <div class="bookings-table-wrapper">
+            <table class="bookings-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الرحلة</th>
+                        <th>اسم الرحلة</th>
+                        <th>الوكالة</th>
+                        <th>الفندق</th>
+                        <th>الغرف</th>
+                        <th>المعتمرين</th>
+                        <th>الإجمالي</th>
+                        <th>العمولة</th>
+                        <th>الصافي</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var booking in filteredBookings)
+                    {
+                        <tr>
+                            <td class="cell-date">
+                                <div class="date-main">@booking.CreatedAt.ToString("dd/MM/yyyy")</div>
+                                <div class="date-time">@booking.CreatedAt.ToString("HH:mm")</div>
+                            </td>
+                            <td class="cell-trip">
+                                <span class="trip-number">@booking.Trip?.TripNumber</span>
+                                <span class="trip-route">@booking.Trip?.DepartureFrom → @booking.Trip?.ArrivalTo</span>
+                            </td>
+                            <td class="cell-trip-name">@booking.Trip?.TripName</td>
+                            <td class="cell-agency">@booking.AgencyName</td>
+                            <td class="cell-hotel">@booking.HotelName</td>
+                            <td class="cell-rooms">
+                                <div class="rooms-stack">
+                                    @if (booking.GroupCount > 0)
+                                    {
+                                        <span class="room-tag">ج @booking.GroupCount</span>
+                                    }
+                                    @if (booking.QuadrupleCount > 0)
+                                    {
+                                        <span class="room-tag">ر @booking.QuadrupleCount</span>
+                                    }
+                                    @if (booking.TripleCount > 0)
+                                    {
+                                        <span class="room-tag">ث @booking.TripleCount</span>
+                                    }
+                                    @if (booking.DoubleCount > 0)
+                                    {
+                                        <span class="room-tag">ن @booking.DoubleCount</span>
+                                    }
+                                    @if (booking.ChildCount > 0)
+                                    {
+                                        <span class="room-tag child">👶 @booking.ChildCount</span>
+                                    }
+                                    @if (booking.InfantCount > 0)
+                                    {
+                                        <span class="room-tag infant">🍼 @booking.InfantCount</span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="cell-number">@booking.TotalPilgrims</td>
+                            <td class="cell-amount">@booking.TotalAmount.ToString("N0")</td>
+                            <td class="cell-amount commission">@booking.Commission.ToString("N0")</td>
+                            <td class="cell-amount net">@booking.NetProfit.ToString("N0")</td>
+                            <td class="cell-actions">
+                                <button class="table-action-btn print" title="طباعة" @onclick="() => PrintBookingReceipt(booking)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                        <path d="M6 12H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                </button>
+                                <button class="table-action-btn view" title="عرض" @onclick="() => ViewDetails(booking)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <button class="table-action-btn payment" title="تسديد" @onclick="() => AddPayment(booking)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
+                                </button>
+                                <button class="table-action-btn delete" title="حذف" @onclick="() => ConfirmDeleteBooking(booking)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="no-results">
+            <div class="no-results-icon">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                    <circle cx="12" cy="15" r="1" fill="currentColor" />
+                </svg>
+            </div>
+            <h3 class="no-results-title">لا توجد حجوزات</h3>
+            <p class="no-results-text">لم يتم العثور على أي حجوزات تطابق معايير البحث</p>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation -->
+@if (showDeleteBookingDialog && bookingToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDeleteBooking">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;">
+                <h3 style="color:white;">تأكيد الحذف</h3>
+                <button class="modal-close" style="color:white;" @onclick="CancelDeleteBooking">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف حجز الوكالة <strong>@bookingToDelete.AgencyName</strong>؟</p>
+                <div class="delete-trip-info">
+                    <div class="info-row">
+                        <span class="info-label">الرحلة:</span>
+                        <span class="info-value">@bookingToDelete.Trip?.TripName</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">الفندق:</span>
+                        <span class="info-value">@bookingToDelete.HotelName</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">المعتمرين:</span>
+                        <span class="info-value">@bookingToDelete.TotalPilgrims</span>
+                    </div>
+                </div>
+
+                <!-- Verification Code -->
+                <div class="verification-box">
+                    <p class="verification-text">أدخل رمز التأكيد للمتابعة:</p>
+                    <div class="verification-code-display">@deleteVerificationCode</div>
+                    <input type="text" class="form-input verification-input"
+                           @bind="deleteCodeInput"
+                           placeholder="أدخل الرمز المكون من 5 أرقام"
+                           maxlength="5" />
+                    @if (!string.IsNullOrEmpty(deleteCodeError))
+                    {
+                        <p class="verification-error">@deleteCodeError</p>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDeleteBooking" disabled="@isDeletingBooking">إلغاء</button>
+                <button class="btn-delete" @onclick="DeleteBookingConfirmed"
+                        disabled="@(isDeletingBooking || deleteCodeInput != deleteVerificationCode)">
+                    @if (isDeletingBooking)
+                    {
+                        <span class="spinner"></span><span>جاري الحذف...</span>
+                    }
+                    else
+                    {
+
+                        <span>🗑️ حذف</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    private List<AgencyBooking> allBookings = new();
+    private List<AgencyBooking> filteredBookings = new();
+    private List<Trip> trips = new();
+    private List<Agency> agencies = new();
+    private string searchQuery = "";
+    private string filterMonth = "";
+    private string filterTripId = "";
+    private string filterAgency = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        filterMonth = DateTime.Now.Month.ToString();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            isLoading = true;
+            allBookings = await AgencyBookingService.GetAllAsync();
+            trips = await TripService.GetAllTripsAsync();
+            agencies = await AgencyService.GetAllAgenciesAsync();
+            ApplyFilters();
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = allBookings.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var q = searchQuery.ToLower();
+            query = query.Where(b =>
+                (b.AgencyName?.ToLower().Contains(q) ?? false) ||
+                (b.HotelName?.ToLower().Contains(q) ?? false) ||
+                (b.Trip?.TripNumber?.ToLower().Contains(q) ?? false) ||
+                (b.Trip?.TripName?.ToLower().Contains(q) ?? false) ||
+                (b.Trip?.Airline?.ToLower().Contains(q) ?? false) ||
+                (b.Trip?.DepartureFrom?.ToLower().Contains(q) ?? false) ||
+                (b.Trip?.ArrivalTo?.ToLower().Contains(q) ?? false) ||
+                (b.Status?.ToLower().Contains(q) ?? false));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filterMonth) && int.TryParse(filterMonth, out var month))
+            query = query.Where(b => b.CreatedAt.Month == month && b.CreatedAt.Year == DateTime.Now.Year);
+
+        if (!string.IsNullOrWhiteSpace(filterTripId) && int.TryParse(filterTripId, out var tripId))
+            query = query.Where(b => b.TripId == tripId);
+
+        if (!string.IsNullOrWhiteSpace(filterAgency))
+            query = query.Where(b => b.AgencyName == filterAgency);
+
+        filteredBookings = query.OrderByDescending(b => b.CreatedAt).ToList();
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e) { filterMonth = e.Value?.ToString() ?? ""; ApplyFilters(); StateHasChanged(); }
+    private async Task OnTripChanged(ChangeEventArgs e) { filterTripId = e.Value?.ToString() ?? ""; ApplyFilters(); StateHasChanged(); }
+    private async Task OnAgencyFilterChanged(ChangeEventArgs e) { filterAgency = e.Value?.ToString() ?? ""; ApplyFilters(); StateHasChanged(); }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await HandleSearch(); }
+    private async Task HandleSearch() { ApplyFilters(); StateHasChanged(); }
+    private async Task ClearSearch() { searchQuery = ""; ApplyFilters(); }
+    private void ResetFilters() { searchQuery = ""; filterMonth = DateTime.Now.Month.ToString(); filterTripId = ""; filterAgency = ""; ApplyFilters(); StateHasChanged(); }
+
+    private void ViewDetails(AgencyBooking booking) { }
+    private async Task DeleteBooking(AgencyBooking booking) { }
+    private void AddPayment(AgencyBooking booking) { }
+
+    private async Task PrintBookingReceipt(AgencyBooking booking)
+    {
+        var html = $@"<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+<head><meta charset='UTF-8'><title>حجز وكالة</title>
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800&display=swap');
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{display:flex;justify-content:center;padding:0;background:#fff;font-family:'Tajawal','Cairo',sans-serif}}
+    .ticket{{width:80mm;background:#fff;padding:4mm 3mm;line-height:1.3;font-size:8px}}
+    .center{{text-align:center}}.bold{{font-weight:700}}
+    .hr{{border:none;border-top:1px solid #000;margin:2mm 0}}
+    .hr-dot{{border:none;border-top:1px dotted #999;margin:1.5mm 0}}
+    .logo{{font-size:14px;font-weight:900;letter-spacing:3px}}
+    .company{{font-size:9px;font-weight:700;margin:0.5mm 0}}
+    .title{{font-size:10px;font-weight:800}}
+    .section-title{{font-size:7px;font-weight:700;text-align:right;margin:1.5mm 0 0.5mm}}
+    .row{{display:flex;justify-content:space-between;font-size:8px;margin:0.3mm 0}}
+    .row span:first-child{{color:#555}}.val{{font-weight:700}}
+    .room-tags{{display:flex;flex-wrap:wrap;gap:0.3mm;margin:1mm 0}}
+    .room-tag{{background:#f5f5f5;padding:0.3mm 1mm;border-radius:1mm;font-size:7px;font-weight:600}}
+    .amount-grid{{display:flex;justify-content:space-between;margin:1.5mm 0}}
+    .amount-item{{text-align:center;flex:1}}
+    .amount-label{{font-size:6px;color:#888}}
+    .amount-value{{font-size:10px;font-weight:800;font-family:'Cairo',monospace}}
+    .amount-value.total{{font-size:12px}}
+    .stamp-area{{display:flex;justify-content:space-between;align-items:flex-end;gap:3mm;margin:4mm 0 2mm}}
+    .stamp-box-inner{{width:26mm;height:15mm;border:1px dashed #999;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:7px}}
+    .stamp-box-inner::after{{content:'ختم الوكالة'}}
+    .sig-line{{border-top:0.5px solid #999;margin-bottom:0.3mm}}
+    .sig-text{{font-size:6px;color:#888}}
+    .footer{{font-size:8px;font-weight:600}}.footer-sub{{font-size:6px;color:#888}}
+    @@page{{size:80mm auto;margin:0}}
+</style></head>
+<body>
+<div class='ticket'>
+    <div class='center logo'>خضور</div>
+    <div class='center company'>وكالة خضور للسياحة والعمرة</div>
+    <hr class='hr'>
+    <div class='center title'>حجز وكالة</div>
+    <div class='center' style='font-size:6px;color:#666'>{booking.Trip?.TripNumber} | {booking.CreatedAt:dd/MM/yyyy}</div>
+    <hr class='hr-dot'>
+    <div class='section-title'>معلومات الرحلة</div>
+    <div class='row'><span>الرحلة</span><span class='val'>{booking.Trip?.TripName}</span></div>
+    <div class='row'><span>المسار</span><span class='val'>{booking.Trip?.DepartureFrom} → {booking.Trip?.ArrivalTo}</span></div>
+    <div class='row'><span>التاريخ</span><span class='val'>{booking.Trip?.DepartureDate:dd/MM/yyyy}</span></div>
+    <div class='row'><span>الخطوط</span><span class='val'>{booking.Trip?.Airline}</span></div>
+    <hr class='hr-dot'>
+    <div class='section-title'>الوكالة</div>
+    <div class='row'><span>الوكالة</span><span class='val'>{booking.AgencyName}</span></div>
+    <div class='row'><span>الفندق</span><span class='val'>{booking.HotelName}</span></div>
+    <div class='row'><span>المعتمرين</span><span class='val'>{booking.TotalPilgrims}</span></div>
+    <hr class='hr-dot'>
+    <div class='section-title'>الغرف</div>
+    <div class='room-tags'>
+        {(booking.GroupCount > 0 ? $"<span class='room-tag'>جماعي {booking.GroupCount} × {booking.GroupPrice:N0}</span>" : "")}
+        {(booking.QuadrupleCount > 0 ? $"<span class='room-tag'>رباعي {booking.QuadrupleCount} × {booking.QuadruplePrice:N0}</span>" : "")}
+        {(booking.TripleCount > 0 ? $"<span class='room-tag'>ثلاثي {booking.TripleCount} × {booking.TriplePrice:N0}</span>" : "")}
+        {(booking.DoubleCount > 0 ? $"<span class='room-tag'>ثنائي {booking.DoubleCount} × {booking.DoublePrice:N0}</span>" : "")}
+        {(booking.ChildCount > 0 ? $"<span class='room-tag'>طفل {booking.ChildCount} × {booking.ChildPrice:N0}</span>" : "")}
+        {(booking.InfantCount > 0 ? $"<span class='room-tag'>رضيع {booking.InfantCount} × {booking.InfantPrice:N0}</span>" : "")}
+    </div>
+    <hr class='hr'>
+    <div class='amount-grid'>
+        <div class='amount-item'><div class='amount-label'>الإجمالي</div><div class='amount-value total'>{booking.TotalAmount:N0}</div></div>
+        <div class='amount-item'><div class='amount-label'>العمولة</div><div class='amount-value' style='color:#c62828'>{booking.Commission:N0}</div></div>
+        <div class='amount-item'><div class='amount-label'>الصافي</div><div class='amount-value' style='color:#2e7d32'>{booking.NetProfit:N0}</div></div>
+    </div>
+    <hr class='hr'>
+    <div class='stamp-area'>
+        <div><div class='stamp-box-inner'></div></div>
+        <div style='flex:1'><div class='sig-line'></div><div class='sig-text'>توقيع المستلم</div></div>
+    </div>
+    <hr class='hr'>
+    <div class='center footer'>شكراً لتعاملكم معنا</div>
+    <div class='center footer-sub'>031 12 34 56 | قسنطينة</div>
+</div>
+<script>window.print();window.close();</script>
+</body></html>";
+        await JS.InvokeVoidAsync("printReceipt", html);
+    }
+    // Delete booking
+    private bool showDeleteBookingDialog = false;
+    private AgencyBooking bookingToDelete = null;
+    private bool isDeletingBooking = false;
+    private string deleteVerificationCode = "";
+    private string deleteCodeInput = "";
+    private string deleteCodeError = "";
+
+    private void ConfirmDeleteBooking(AgencyBooking booking)
+    {
+        bookingToDelete = booking;
+        // Generate random 5-digit code
+        deleteVerificationCode = new Random().Next(10000, 99999).ToString();
+        deleteCodeInput = "";
+        deleteCodeError = "";
+        showDeleteBookingDialog = true;
+    }
+
+    private void CancelDeleteBooking()
+    {
+        if (!isDeletingBooking)
+        {
+            showDeleteBookingDialog = false;
+            bookingToDelete = null;
+            deleteCodeInput = "";
+            deleteVerificationCode = "";
+            deleteCodeError = "";
+        }
+    }
+
+    private async Task DeleteBookingConfirmed()
+    {
+        if (bookingToDelete == null) return;
+
+        if (deleteCodeInput != deleteVerificationCode)
+        {
+            deleteCodeError = "الرمز غير صحيح، حاول مرة أخرى";
+            return;
+        }
+
+        try
+        {
+            isDeletingBooking = true;
+            deleteCodeError = "";
+            StateHasChanged();
+
+            var success = await AgencyBookingService.DeleteAsync(bookingToDelete.Id);
+            if (success)
+            {
+                showDeleteBookingDialog = false;
+                bookingToDelete = null;
+                deleteCodeInput = "";
+                deleteVerificationCode = "";
+                await LoadDataAsync();
+            }
+        }
+        catch { }
+        finally { isDeletingBooking = false; StateHasChanged(); }
+    }
+}

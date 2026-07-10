@@ -1,0 +1,252 @@
+﻿@using AgenceBlazor.Models
+@using System.Globalization
+
+<div class="modal-overlay" @onclick="OnCancel">
+    <div class="modal-card booking-modal" @onclick:stopPropagation="true">
+        <!-- Header -->
+        <div class="modal-header">
+            <h3>🕋 حجز معتمر جديد</h3>
+            <button class="close-btn" @onclick="OnCancel" disabled="@IsSaving">✕</button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+            <!-- Trip Summary -->
+            <div class="trip-summary">
+                <span class="label">رقم الرحلة:</span>
+                <span class="value">@Trip.TripNumber</span>
+                <span class="label">التاريخ:</span>
+                <span class="value">@Trip.DepartureDate.ToString("dd/MM/yyyy")</span>
+                <span class="label">الخطوط:</span>
+                <span class="value">@Trip.Airline</span>
+                <span class="label">المقاعد المتبقية:</span>
+                <span class="value" style="color:@(Trip.RemainingSeats < 20 ? "#d32f2f" : "#0f172a")">@Trip.RemainingSeats</span>
+                <div class="route">✈ @Trip.DepartureFrom → @Trip.ArrivalTo</div>
+            </div>
+
+            <!-- Pilgrim Name -->
+            <div class="form-group">
+                <label>اسم المعتمر</label>
+                <input type="text" class="form-input" @bind="BookingModel.PilgrimName" placeholder="أدخل اسم المعتمر الكامل" />
+            </div>
+
+            <!-- Number of Pilgrims -->
+            <div class="form-group">
+                <label>عدد المعتمرين</label>
+                <div class="quick-btns">
+                    @foreach (var count in new[] { 1, 2, 3, 4, 5 })
+                    {
+                        <button class="quick-btn @(BookingModel.PilgrimCount == count ? "active" : "")"
+                                @onclick="() => SetPilgrimCount(count)">
+                            @count
+                        </button>
+                    }
+                    <button class="quick-btn @(BookingModel.PilgrimCount > 5 ? "active" : "")"
+                            @onclick="() => ToggleCustomCount()">
+                        +
+                    </button>
+                </div>
+                @if (ShowCustomCount)
+                {
+                    <input type="number" class="form-input" @bind="BookingModel.PilgrimCount"
+                           min="1" max="@Trip.RemainingSeats" style="margin-top:0.5rem;" />
+                }
+            </div>
+
+            <!-- Hotel -->
+            <div class="form-group">
+                <label>الفندق</label>
+                <div class="quick-btns">
+                    @foreach (var hotel in Hotels)
+                    {
+                        var h = hotel; // Capture variable for closure
+                        <button class="quick-btn @(BookingModel.Hotel == h ? "active" : "")"
+                                @onclick="@(() => SelectHotel(h))">
+                            @h
+                        </button>
+                    }
+                    <button class="quick-btn @(BookingModel.Hotel == "أخرى" ? "active" : "")"
+                            @onclick="@(() => SelectHotel("أخرى"))">
+                        أخرى
+                    </button>
+                </div>
+                @if (BookingModel.Hotel == "أخرى")
+                {
+                    <input type="text" class="form-input" @bind="CustomHotel"
+                           placeholder="أدخل اسم الفندق" style="margin-top:0.5rem;" />
+                }
+            </div>
+
+            <!-- Room Type -->
+            <div class="form-group">
+                <label>نوع الغرفة</label>
+                <div class="quick-btns">
+                    @foreach (var roomType in RoomTypes)
+                    {
+                        <button class="quick-btn @(BookingModel.RoomType == roomType ? "active" : "")"
+                                @onclick="() => BookingModel.RoomType = roomType">
+                            @roomType
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Price & Commission -->
+            <div class="price-row">
+                <div class="form-group currency">
+                    <label>سعر الفرد (دج)</label>
+                    <input type="number" class="form-input" @bind="BookingModel.PricePerPerson" step="1000" min="0" />
+                    <span class="currency-symbol">دج</span>
+                </div>
+                <div class="form-group currency">
+                    <label>عمولة الوسيط (دج)</label>
+                    <input type="number" class="form-input" @bind="BookingModel.MediatorCommission" step="500" min="0" />
+                    <span class="currency-symbol">دج</span>
+                </div>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="total-box">
+                <span>المبلغ الإجمالي</span>
+                <span class="value">@TotalAmount.ToString("N2") دج</span>
+            </div>
+
+            <!-- Net Profit -->
+            <div class="net-profit-box">
+                <span class="label">الربح الصافي</span>
+                <span class="value">@NetProfit.ToString("N2") دج</span>
+            </div>
+
+            <!-- Mediator Name -->
+            <div class="form-group">
+                <label>اسم الوسيط</label>
+                <input type="text" class="form-input" @bind="BookingModel.MediatorName" placeholder="اسم الوسيط (اختياري)" />
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+            <button class="btn btn-print" @onclick="() => OnPrint.InvokeAsync(BookingModel)" disabled="@IsSaving">
+                🖨️ طباعة الوصل (80 مم)
+            </button>
+            <button class="btn btn-outline" @onclick="() => OnPrint.InvokeAsync(BookingModel)" disabled="@IsSaving">
+                🧕 للمعتمر
+            </button>
+            <button class="btn btn-outline" @onclick="() => OnPrint.InvokeAsync(BookingModel)" disabled="@IsSaving">
+                🤝 للوسيط
+            </button>
+            <button class="btn btn-save" @onclick="HandleSave" disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <span class="btn-spinner"></span>
+                    <span>جاري الحفظ...</span>
+                }
+                else
+                {
+                    <span>💾 حفظ</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public Trip Trip { get; set; }
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    [Parameter]
+    public EventCallback<BookingData> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<BookingData> OnPrint { get; set; }
+
+    private BookingData BookingModel = new BookingData();
+    private bool ShowCustomCount = false;
+    private string CustomHotel = "";
+
+    // Booking functionality
+    private bool showBookingModal = false;
+    private Trip bookingTrip = null;
+    private bool isBookingSaving = false;
+
+    private string[] Hotels = { "زوار البيت", "جوهرة البيت", "مورو", "صلاح اجياد", "دار التقوى", "روضة المعرفة" };
+    private string[] RoomTypes = { "جماعي", "رباعي", "ثلاثي", "ثنائي" };
+
+    private decimal TotalAmount => BookingModel.PricePerPerson * BookingModel.PilgrimCount;
+    private decimal NetProfit => TotalAmount - BookingModel.MediatorCommission;
+
+    protected override void OnParametersSet()
+    {
+        if (BookingModel.PilgrimName == null)
+        {
+            BookingModel = new BookingData
+            {
+                PilgrimCount = 1,
+                PricePerPerson = 85000,
+                MediatorCommission = 5000,
+                Hotel = "مورو",
+                RoomType = "ثلاثي"
+            };
+        }
+    }
+
+    private void SetPilgrimCount(int count)
+    {
+        BookingModel.PilgrimCount = count;
+        ShowCustomCount = false;
+    }
+
+    private void ToggleCustomCount()
+    {
+        ShowCustomCount = !ShowCustomCount;
+        if (ShowCustomCount && BookingModel.PilgrimCount <= 5)
+        {
+            BookingModel.PilgrimCount = 6;
+        }
+    }
+
+    private void SelectHotel(string hotel)
+    {
+        BookingModel.Hotel = hotel;
+        if (hotel != "أخرى")
+        {
+            CustomHotel = "";
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        // If custom hotel is selected, use the custom value
+        if (BookingModel.Hotel == "أخرى" && !string.IsNullOrWhiteSpace(CustomHotel))
+        {
+            BookingModel.Hotel = CustomHotel;
+        }
+
+        await OnSave.InvokeAsync(BookingModel);
+    }
+
+    public class BookingData
+    {
+        public string PilgrimName { get; set; }
+        public int PilgrimCount { get; set; } = 1;
+        public string Hotel { get; set; }
+        public string RoomType { get; set; }
+        public decimal PricePerPerson { get; set; }
+        public decimal MediatorCommission { get; set; }
+        public string MediatorName { get; set; }
+    }
+    private void OpenBookingModal(Trip trip)
+    {
+        Console.WriteLine($"Opening booking modal for trip: {trip.TripNumber}"); // Debug
+        bookingTrip = trip;
+        showBookingModal = true;
+        StateHasChanged(); // Force UI update
+    }
+}

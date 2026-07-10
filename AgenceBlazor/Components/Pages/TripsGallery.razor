@@ -1,0 +1,2748 @@
+﻿@page "/TripsGallery"
+@rendermode InteractiveServer
+@using System.Globalization
+@using AgenceBlazor.Models
+@using AgenceBlazor.Services
+@inject TripService TripService
+@inject HotelService HotelService
+@inject AgencyService AgencyService
+@inject AgencyBookingService AgencyBookingService
+@inject DirectPilgrimService DirectPilgrimService
+@* @inject TripGuideService TripGuideService *@
+@inject ITripGuideService TripGuideService
+@inject IJSRuntime JSRuntime
+
+<div class="trips-cards-container">
+    <div class="cards-header">
+        <div class="header-top">
+            <div class="header-content">
+                <div class="header-badge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    <span>رحلات العمرة</span>
+                </div>
+                <h1 class="cards-title">الرحلات المتاحة</h1>
+                <p class="cards-subtitle">استعرض رحلاتنا المتاحة واختر ما يناسبك</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-value">@totalTrips</span>
+                    <span class="stat-label">إجمالي الرحلات</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@directTrips</span>
+                    <span class="stat-label">مباشرة</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">@indirectTrips</span>
+                    <span class="stat-label">غير مباشرة</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </div>
+                <button class="search-clear" @onclick="ClearSearch" style="@(string.IsNullOrEmpty(searchQuery) ? "display: none;" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <input type="text"
+                       class="search-input"
+                       placeholder="ابحث عن رحلة... (رقم الرحلة، الاسم، المحطة، أو البرنامج)"
+                       @bind="searchQuery"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown" />
+
+                <button class="search-clear" @onclick="ClearSearch" style="@(string.IsNullOrEmpty(searchQuery) ? "display: none;" : "")">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <button class="search-btn" @onclick="HandleSearch">
+                    <span>بحث</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </button>
+            </div>
+            <div class="search-tags">
+                @{
+                    var searchTags = new List<(string Query, string Label)>
+                    {
+                        ("مباشرة", "رحلات مباشرة"),
+                        ("غير مباشرة", "رحلات غير مباشرة"),
+                        ("السعودية", "الخطوط السعودية"),
+                        ("التركية", "الخطوط التركية"),
+                        ("المدينة المنورة", "دخول مدينة"),
+                        ("جدة", "دخول جدة"),
+                        ("الجزائر", "الجزائر"),
+                        ("قسنطينة", "قسنطينة")
+                    };
+                }
+
+                @foreach (var tag in searchTags)
+                {
+                    <span class="search-tag" @onclick="@(() => SetSearchQuery(tag.Query))">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        @tag.Label
+                    </span>
+                }
+            </div>
+            @if (filteredTrips != null && allTrips != null && filteredTrips.Count < allTrips.Count)
+            {
+                <div class="search-results-count">
+                    <span>@filteredTrips.Count</span>
+                    <span>نتيجة</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>جاري تحميل الرحلات...</p>
+        </div>
+    }
+    else if (filteredTrips != null && filteredTrips.Any())
+    {
+        <div class="trips-list">
+            @foreach (var trip in filteredTrips)
+            {
+                var guideInfo = tripGuides.ContainsKey(trip.Id) ? tripGuides[trip.Id] : null;
+                <div class="trip-card">
+                    <div class="card-accent"></div>
+                    <div class="card-body">
+                        <div class="card-section details-section">
+                            <div class="trip-main-info">
+                                <div class="trip-header">
+                                    <span class="trip-number">@trip.TripNumber</span>
+                                    <h3 class="trip-name">@trip.TripName</h3>
+                                </div>
+                                <span class="trip-type-badge @(trip.TripType == "مباشرة" ? "direct" : "indirect")">
+                                    <span class="badge-dot"></span>
+                                    @trip.TripType
+                                </span>
+                            </div>
+                            
+                            <!-- Guide Info Badge -->
+                            @if (guideInfo != null)
+                            {
+                                <div class="guide-info-badge">
+                                    <div class="guide-badge">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                            <circle cx="12" cy="7" r="4" />
+                                        </svg>
+                                        <span class="guide-name">@guideInfo.Name</span>
+                                        <span class="guide-agency">@guideInfo.Agency</span>
+                                        <span class="guide-grant">💰 @guideInfo.GrantAmount.ToString("N0") دج</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="guide-info-badge empty">
+                                    <span class="guide-empty-text">⚠️ لم يتم تعيين مرشد</span>
+                                </div>
+                            }
+
+                            <div class="detail-divider"></div>
+                            <div class="detail-block">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span class="detail-text">@trip.DepartureDate.ToString("dd MMMM yyyy", new CultureInfo("ar-SA"))</span>
+                            </div>
+                            <div class="detail-divider"></div>
+                            <div class="detail-block">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                                </svg>
+                                <span class="detail-text">@trip.Airline</span>
+                            </div>
+                            <div class="detail-divider"></div>
+                            <div class="detail-block">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                    <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
+                                </svg>
+                                <span class="detail-text">@trip.Program</span>
+                            </div>
+
+                            <div class="detail-divider"></div>
+                            <div class="route-display">
+                                <div class="route-point">
+                                    <span class="point-time">الإقلاع</span>
+                                    <span class="point-city">@trip.DepartureFrom</span>
+                                </div>
+                                <div class="route-visual">
+                                    <span class="route-dot start"></span>
+                                    <span class="route-line"></span>
+                                    <span class="route-dot end"></span>
+                                </div>
+                                <div class="route-point">
+                                    <span class="point-time">الوصول</span>
+                                    <span class="point-city">@trip.ArrivalTo</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-section action-section">
+                            <div class="seats-display">
+                                <div class="seats-bar-container">
+                                    <div class="seats-bar">
+                                        <div class="seats-bar-fill @(trip.RemainingSeats <= 5 ? "critical" : trip.RemainingSeats < 20 ? "urgent" : "")"
+                                             style="width: @((trip.TotalSeats > 0 ? (trip.FilledSeats * 100) / trip.TotalSeats : 0))%">
+                                        </div>
+                                    </div>
+                                    <div class="seats-labels">
+                                        <div class="seat-label-item">
+                                            <span class="label-text">الإجمالي</span>
+                                            <span class="label-number">@trip.TotalSeats</span>
+                                        </div>
+                                        <div class="seat-label-item">
+                                            <span class="label-text">محجوز</span>
+                                            <span class="label-number">@trip.FilledSeats</span>
+                                        </div>
+                                        <div class="seat-label-item available">
+                                            <span class="label-text">متاح</span>
+                                            <span class="label-number @(trip.RemainingSeats < 20 ? "urgent" : "")">@trip.RemainingSeats</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="action-buttons">
+
+                                <!-- Guide Button -->
+                                <!-- Guide Button -->
+                                <button class="action-btn guide-btn @(tripGuides.ContainsKey(trip.Id) ? "has-guide" : "")"
+                                        title="@(tripGuides.ContainsKey(trip.Id) ? "تعديل المرشد" : "إدارة المرشد")"
+                                        @onclick="async () => await OpenGuideModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                        <circle cx="12" cy="7" r="4" />
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                </button>
+                                <!-- Show Hotels -->
+                                <button class="action-btn" title="عرض الفنادق والأسعار" @onclick="() => OpenHotelsModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"></path>
+                                        <path d="M3 21h18"></path>
+                                        <line x1="8" y1="9" x2="16" y2="9"></line>
+                                        <line x1="8" y1="13" x2="14" y2="13"></line>
+                                        <line x1="8" y1="17" x2="16" y2="17"></line>
+                                    </svg>
+                                </button>
+
+                                <!-- Add Hotel -->
+                                <button class="action-btn" title="إضافة فندق" @onclick="() => OpenHotelModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 21h18"></path>
+                                        <path d="M3 7v14h18V7l-9-5-9 5z"></path>
+                                        <path d="M9 21v-8h6v8"></path>
+                                    </svg>
+                                </button>
+
+                                <!-- Add Agency Booking -->
+                                <button class="action-btn" title="إضافة حجز وكالة" @onclick="() => OpenAgencyBookingModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14" />
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    </svg>
+                                </button>
+
+                                <!-- Add Travelers -->
+                                @* <button class="action-btn" title="إضافة مسافرين" @onclick="() => AddAgencyBooking(trip.Id)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                </button> *@
+                                <!-- Direct Pilgrim Booking -->
+                                <button class="action-btn" title="تسجيل معتمر مباشر" @onclick="() => OpenDirectBookingModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <line x1="19" y1="8" x2="19" y2="14" />
+                                        <line x1="22" y1="11" x2="16" y2="11" />
+                                    </svg>
+                                </button>
+
+                                <!-- Edit -->
+                                <button class="action-btn" title="تعديل" @onclick="() => OpenEditModal(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+
+                                <!-- Delete -->
+                                <button class="action-btn" title="حذف" @onclick="() => ConfirmDelete(trip)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        <line x1="10" y1="11" x2="10" y2="17" />
+                                        <line x1="14" y1="11" x2="14" y2="17" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (!isLoading)
+    {
+        <div class="no-results">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <h3>لا توجد رحلات</h3>
+            <p>لم يتم العثور على رحلات تطابق معايير البحث</p>
+        </div>
+    }
+</div>
+
+
+<!-- Guide Modal -->
+@if (showGuideModal && guideTrip != null)
+{
+    <div class="bkg-overlay" @onclick="CancelGuide">
+        <div class="bkg-card" @onclick:stopPropagation="true">
+            <div class="bkg-header" style="background: linear-gradient(135deg, #1e40af, #3b82f6);">
+                <h3 class="bkg-title">🧭 إدارة مرشد الرحلة</h3>
+                <button class="bkg-close" @onclick="CancelGuide" disabled="@isSavingGuide">✕</button>
+            </div>
+
+            <div class="bkg-body">
+                <!-- Trip Summary -->
+                <div class="bkg-summary">
+                    <div class="bkg-summary-row">
+                        <span class="bkg-summary-lbl">رقم الرحلة:</span>
+                        <span class="bkg-summary-val">@guideTrip.TripNumber</span>
+                    </div>
+                    <div class="bkg-summary-row">
+                        <span class="bkg-summary-lbl">الرحلة:</span>
+                        <span class="bkg-summary-val">@guideTrip.TripName</span>
+                    </div>
+                    <div class="bkg-summary-row">
+                        <span class="bkg-summary-lbl">التاريخ:</span>
+                        <span class="bkg-summary-val">@guideTrip.DepartureDate.ToString("dd/MM/yyyy")</span>
+                    </div>
+                    <div class="bkg-route">✈ @guideTrip.DepartureFrom → @guideTrip.ArrivalTo</div>
+                </div>
+
+                <!-- Guide Form -->
+                <div class="bkg-field">
+                    <label class="bkg-label">اسم المرشد *</label>
+                    <input type="text" class="bkg-input" @bind="guideName" @bind:event="oninput" placeholder="أدخل اسم المرشد" />
+                </div>
+
+                <div class="bkg-field">
+                    <label class="bkg-label">الوكالة التابع لها</label>
+                    <select class="bkg-select" @bind="guideAgency">
+                        <option value="">اختر الوكالة...</option>
+                        @foreach (var agency in agencyNames)
+                        {
+                            <option value="@agency">@agency</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="bkg-field bkg-currency">
+                    <label class="bkg-label">مبلغ المنحة (دج)</label>
+                    <input type="number" class="bkg-input" @bind="guideGrantAmount" step="1000" min="0" />
+                    <span class="bkg-currency-sym">دج</span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(guideError))
+                {
+                    <div class="guide-error">❌ @guideError</div>
+                }
+
+                @if (existingGuide != null)
+                {
+                    <div class="guide-existing-info">
+                        <div class="guide-existing-header">📋 المرشد الحالي</div>
+                        <div class="guide-existing-row">
+                            <span>الاسم:</span>
+                            <strong>@existingGuide.Name</strong>
+                        </div>
+                        <div class="guide-existing-row">
+                            <span>الوكالة:</span>
+                            <strong>@existingGuide.Agency</strong>
+                        </div>
+                        <div class="guide-existing-row">
+                            <span>المنحة:</span>
+                            <strong>@existingGuide.GrantAmount.ToString("N0") دج</strong>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="bkg-footer">
+                @if (existingGuide != null)
+                {
+                    <button class="bkg-btn-cancel" @onclick="DeleteGuide" disabled="@isSavingGuide" style="background:#dc2626;color:white;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span>حذف المرشد</span>
+                    </button>
+                }
+                <button class="bkg-btn-cancel" @onclick="CancelGuide" disabled="@isSavingGuide">
+                    ✕ إلغاء
+                </button>
+
+                <button class="bkg-btn-save" @onclick="SaveGuide" disabled="@isSavingGuide">
+                    @if (isSavingGuide)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ</span>
+                    }
+                </button>
+                @* <button class="bkg-btn-save"
+                        @onclick="@(async () => { Console.WriteLine($"CLICK guideName=[{guideName}]"); await SaveGuide(); })"
+                        disabled="@isSavingGuide">
+                    @if (isSavingGuide)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ</span>
+                    }
+                </button> *@
+            </div>
+        </div>
+    </div>
+}
+
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal)
+{
+    <div class="modal-overlay" @onclick="CancelDelete">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <div class="modal-icon danger">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </div>
+                <h3>تأكيد الحذف</h3>
+            </div>
+
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذه الرحلة؟</p>
+                @if (tripToDelete != null)
+                {
+                    <div class="delete-trip-info">
+                        <div class="info-row">
+                            <span class="info-label">رقم الرحلة:</span>
+                            <span class="info-value">@tripToDelete.TripNumber</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">اسم الرحلة:</span>
+                            <span class="info-value">@tripToDelete.TripName</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">تاريخ المغادرة:</span>
+                            <span class="info-value">@tripToDelete.DepartureDate.ToString("dd MMMM yyyy", new CultureInfo("ar-SA"))</span>
+                        </div>
+                    </div>
+                }
+                <p class="warning-text">لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn cancel" @onclick="CancelDelete" disabled="@isDeleting">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    <span>إلغاء</span>
+                </button>
+                <button class="modal-btn confirm" @onclick="DeleteTrip" disabled="@isDeleting">
+                    @if (isDeleting)
+                    {
+                        <span class="btn-spinner"></span>
+                        <span>جاري الحذف...</span>
+                    }
+                    else
+                    {
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span>تأكيد الحذف</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Trip Modal -->
+@if (showEditModal)
+{
+    <div class="modal-overlay" @onclick="CancelEdit">
+        <div class="modal-container edit-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <div class="modal-icon edit">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                </div>
+                <h3>تعديل الرحلة</h3>
+            </div>
+
+            <div class="modal-body">
+                <EditForm Model="@editModel" OnValidSubmit="@HandleEditSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">اسم الرحلة</label>
+                            <InputText @bind-Value="editModel.TripName" class="form-input" placeholder="أدخل اسم الرحلة" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">رقم الرحلة</label>
+                            <InputText @bind-Value="editModel.TripNumber" class="form-input" placeholder="أدخل رقم الرحلة" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">تاريخ المغادرة</label>
+                            <InputDate @bind-Value="editModel.DepartureDate" class="form-input" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">نوع الرحلة</label>
+                            <InputSelect @bind-Value="editModel.TripType" class="form-input">
+                                <option value="مباشرة">مباشرة</option>
+                                <option value="غير مباشرة">غير مباشرة</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">عدد المقاعد الكلي</label>
+                            <InputNumber @bind-Value="editModel.TotalSeats" class="form-input" min="1" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">عدد المقاعد المحجوزة</label>
+                            <InputNumber @bind-Value="editModel.FilledSeats" class="form-input" min="0" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">الخطوط الجوية</label>
+                            <InputSelect @bind-Value="editModel.Airline" class="form-input">
+                                <option value="السعودية">السعودية</option>
+                                <option value="التركية">التركية</option>
+                                <option value="القطرية">القطرية</option>
+                                <option value="الإماراتية">الإماراتية</option>
+                                <option value="المصرية">المصرية</option>
+                                <option value="المغربية">المغربية</option>
+                                <option value="التونسية">التونسية</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">المغادرة من</label>
+                            <InputText @bind-Value="editModel.DepartureFrom" class="form-input" placeholder="مدينة المغادرة" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">الوصول إلى</label>
+                            <InputText @bind-Value="editModel.ArrivalTo" class="form-input" placeholder="مدينة الوصول" />
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">البرنامج</label>
+                            <InputText @bind-Value="editModel.Program" class="form-input" placeholder="تفاصيل البرنامج" />
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editErrorMessage))
+                    {
+                        <div class="form-error-message">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span>@editErrorMessage</span>
+                        </div>
+                    }
+
+                    <div class="modal-footer">
+                        <button type="button" class="modal-btn cancel" @onclick="CancelEdit" disabled="@isSaving">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                            <span>إلغاء</span>
+                        </button>
+                        <button type="submit" class="modal-btn confirm edit-confirm" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="btn-spinner"></span>
+                                <span>جاري الحفظ...</span>
+                            }
+                            else
+                            {
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                    <polyline points="17 21 17 13 7 13 7 21" />
+                                    <polyline points="7 3 7 8 15 8" />
+                                </svg>
+                                <span>حفظ التغييرات</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Success/Error Toast Notification -->
+@if (showToast)
+{
+    <div class="toast @(toastSuccess ? "toast-success" : "toast-error")">
+        <div class="toast-icon">
+            @if (toastSuccess)
+            {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+            }
+            else
+            {
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+            }
+        </div>
+        <span class="toast-message">@toastMessage</span>
+        <button class="toast-close" @onclick="() => showToast = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+    </div>
+}
+<!-- Booking Modal - Unique Classes -->
+@if (showBookingModal && bookingTrip != null)
+{
+    <div class="bkg-overlay" @onclick="CancelBooking">
+        <div class="bkg-card" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="bkg-header">
+                <h3 class="bkg-title">🕋 حجز معتمر جديد</h3>
+                <button class="bkg-close" @onclick="CancelBooking" disabled="@isBookingSaving">✕</button>
+            </div>
+
+            <!-- Body - Two Columns -->
+            <div class="bkg-body">
+                <!-- Left Column -->
+                <div class="bkg-col">
+                    <!-- Trip Summary -->
+                    <div class="bkg-summary">
+                        <div class="bkg-summary-row"><span class="bkg-summary-lbl">رقم الرحلة:</span><span class="bkg-summary-val">@bookingTrip.TripNumber</span></div>
+                        <div class="bkg-summary-row"><span class="bkg-summary-lbl">التاريخ:</span><span class="bkg-summary-val">@bookingTrip.DepartureDate.ToString("dd/MM/yyyy")</span></div>
+                        <div class="bkg-summary-row"><span class="bkg-summary-lbl">الخطوط:</span><span class="bkg-summary-val">@bookingTrip.Airline</span></div>
+                        <div class="bkg-summary-row"><span class="bkg-summary-lbl">المقاعد:</span><span class="bkg-summary-val">@bookingTrip.RemainingSeats</span></div>
+                        <div class="bkg-route">✈ @bookingTrip.DepartureFrom → @bookingTrip.ArrivalTo</div>
+                    </div>
+
+                    <!-- Pilgrim Info -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">اسم المعتمر</label>
+                        <input type="text" class="bkg-input" @bind="pilgrimName" placeholder="أدخل اسم المعتمر الكامل" />
+                    </div>
+
+                    <div class="bkg-field">
+                        <label class="bkg-label">اسم الوسيط</label>
+                        <input type="text" class="bkg-input" @bind="mediatorName" placeholder="اسم الوسيط (اختياري)" />
+                    </div>
+
+                    <!-- Room Type -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">نوع الغرفة</label>
+                        <div class="bkg-btns">
+                            @{
+                                var roomTypes = new[] { "جماعي", "رباعي", "ثلاثي", "ثنائي" };
+                            }
+                            @foreach (var roomType in roomTypes)
+                            {
+                                <button class="bkg-btn @(selectedRoomType == roomType ? "active" : "")"
+                                        @onclick="() => selectedRoomType = roomType">
+                                    @roomType
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Hotel -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الفندق</label>
+                        <div class="bkg-btns">
+                            @{
+                                var hotels = new[] { "زوار البيت", "جوهرة البيت", "مورو", "صلاح اجياد" };
+                            }
+                            @foreach (var hotel in hotels)
+                            {
+                                <button class="bkg-btn @(selectedHotel == hotel ? "active" : "")"
+                                        @onclick="() => selectedHotel = hotel">
+                                    @hotel
+                                </button>
+                            }
+                            <button class="bkg-btn @(selectedHotel == "أخرى" ? "active" : "")"
+                                    @onclick='() => selectedHotel = "أخرى"'>
+                                أخرى
+                            </button>
+                        </div>
+                        @if (selectedHotel == "أخرى")
+                        {
+                            <input type="text" class="bkg-input" @bind="customHotel"
+                                   placeholder="أدخل اسم الفندق" style="margin-top:0.5rem;" />
+                        }
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="bkg-col">
+                    <!-- Number of Pilgrims -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">عدد المعتمرين</label>
+                        <div class="bkg-btns">
+                            @foreach (var count in new[] { 1, 2, 3, 4, 5 })
+                            {
+                                <button class="bkg-btn @(pilgrimCount == count ? "active" : "")"
+                                        @onclick="() => pilgrimCount = count">
+                                    @count
+                                </button>
+                            }
+                            <button class="bkg-btn @(pilgrimCount > 5 ? "active" : "")"
+                                    @onclick="() => pilgrimCount = pilgrimCount > 5 ? 1 : 6">
+                                +
+                            </button>
+                        </div>
+                        @if (pilgrimCount > 5)
+                        {
+                            <input type="number" class="bkg-input" @bind="pilgrimCount"
+                                   min="1" max="@bookingTrip.RemainingSeats" style="margin-top:0.5rem;" />
+                        }
+                    </div>
+
+                    <!-- Price per person -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">سعر الفرد (دج)</label>
+                        <input type="number" class="bkg-input" @bind="pricePerPerson" step="1000" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Commission -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">عمولة الوسيط (دج)</label>
+                        <input type="number" class="bkg-input" @bind="mediatorCommission" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Calculations -->
+                    @{
+                        var totalAmount = pricePerPerson * pilgrimCount;
+                        var netProfit = totalAmount - mediatorCommission;
+                    }
+
+                    <!-- Total Amount -->
+                    <div class="bkg-total">
+                        <span>المبلغ الإجمالي</span>
+                        <span class="bkg-total-val">@totalAmount.ToString("N0") دج</span>
+                    </div>
+
+                    <!-- Net Profit -->
+                    <div class="bkg-profit">
+                        <span class="bkg-profit-lbl">الربح الصافي</span>
+                        <span class="bkg-profit-val">@netProfit.ToString("N0") دج</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bkg-footer">
+                <button class="bkg-btn-save" @onclick="SaveBooking" disabled="@isBookingSaving">
+                    @if (isBookingSaving)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ</span>
+                    }
+                </button>
+                <button class="bkg-btn-cancel" @onclick="CancelBooking" disabled="@isBookingSaving">
+                    ✕ إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+}
+<!-- Agency Booking Modal -->
+@if (showAgencyBookingModal && agencyBookingTrip != null)
+{
+    <div class="bkg-overlay" @onclick="CancelAgencyBooking">
+        <div class="bkg-card bkg-agency-wide" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="bkg-header">
+                <h3 class="bkg-title">🏢 حجز وكالة</h3>
+                <button class="bkg-close" @onclick="CancelAgencyBooking" disabled="@isAgencyBookingSaving">✕</button>
+            </div>
+
+            <!-- Trip Summary -->
+            <div class="bkg-summary">
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">رقم الرحلة:</span><span class="bkg-summary-val">@agencyBookingTrip.TripNumber</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">التاريخ:</span><span class="bkg-summary-val">@agencyBookingTrip.DepartureDate.ToString("dd/MM/yyyy")</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">الخطوط:</span><span class="bkg-summary-val">@agencyBookingTrip.Airline</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">المقاعد المتبقية:</span><span class="bkg-summary-val">@agencyBookingTrip.RemainingSeats</span></div>
+                <div class="bkg-route">✈ @agencyBookingTrip.DepartureFrom → @agencyBookingTrip.ArrivalTo</div>
+            </div>
+
+            <!-- Body - Two Columns -->
+            <div class="bkg-body">
+                <!-- Left Column -->
+                <div class="bkg-col">
+
+                    @* <!-- Hotel -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الفندق</label>
+                        <div class="bkg-btns">
+                            @{
+                                var agencyHotels = new[] { "زوار البيت", "جوهرة البيت", "مورو", "صلاح اجياد", "دار التقوى" };
+                            }
+                            @foreach (var hotel in agencyHotels)
+                            {
+                                <button class="bkg-btn @(selectedAgencyHotel == hotel ? "active" : "")"
+                                        @onclick="() => selectedAgencyHotel = hotel">
+                                    @hotel
+                                </button>
+                            }
+                            <button class="bkg-btn @(selectedAgencyHotel == "أخرى" ? "active" : "")"
+                                    @onclick='() => selectedAgencyHotel = "أخرى"'>
+                                أخرى
+                            </button>
+                        </div>
+                        @if (selectedAgencyHotel == "أخرى")
+                        {
+                            <input type="text" class="bkg-input" @bind="agencyCustomHotel"
+                                   placeholder="أدخل اسم الفندق" style="margin-top:0.5rem;" />
+                        }
+                    </div> *@
+                    <!-- Hotel -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الفندق</label>
+                        <div class="bkg-btns">
+                            @foreach (var hotel in agencyHotels)
+                            {
+                                <button class="bkg-btn @(selectedAgencyHotel == hotel ? "active" : "")"
+                                        @onclick="() => SelectAgencyHotel(hotel)">
+                                    @hotel
+                                </button>
+                            }
+                            @* <button class="bkg-btn @(selectedAgencyHotel == "أخرى" ? "active" : "")"
+                                    @onclick='() => SelectAgencyHotel("أخرى")'>
+                                أخرى
+                            </button> *@
+                        </div>
+                        @if (selectedAgencyHotel == "أخرى")
+                        {
+                            <input type="text" class="bkg-input" @bind="agencyCustomHotel"
+                                   placeholder="أدخل اسم الفندق" style="margin-top:0.5rem;" />
+                        }
+                    </div>
+
+                    <!-- Room Type Distribution with Individual Prices -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">توزيع المعتمرين والأسعار حسب نوع الغرفة</label>
+                        <div class="bkg-room-dist">
+                            <!-- جماعي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">جماعي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Group" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.GroupPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- رباعي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">رباعي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Quadruple" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.QuadruplePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- ثلاثي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">ثلاثي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Triple" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.TriplePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- ثنائي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">ثنائي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Double" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.DoublePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- طفل -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">طفل</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Child" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.ChildPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- رضيع -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">رضيع</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="roomCounts.Infant" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="roomPrices.InfantPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                        </div>
+                        <div class="bkg-total-pilgrims">
+                            <span>إجمالي المعتمرين:</span>
+                            <strong>@totalAgencyPilgrims</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="bkg-col">
+                    <!-- Agency Selection -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الوكالة</label>
+                        <select class="bkg-select" @bind="selectedAgency">
+                            <option value="">اختر الوكالة...</option>
+                            @foreach (var agency in agencyNames)
+                            {
+                                <option value="@agency">@agency</option>
+                            }
+                        </select>
+                    </div>
+                    <!-- Commission per adult -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">عمولة الوكالة لكل معتمر (دج)</label>
+                        <input type="number" class="bkg-input" @bind="agencyCommission" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Custom Reduction -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">تخفيض / خصم (دج)</label>
+                        <input type="number" class="bkg-input" @bind="customReduction" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Calculations -->
+                    @{
+                        // Calculate total based on each room type count × its price
+                        var groupTotal = roomCounts.Group * roomPrices.GroupPrice;
+                        var quadTotal = roomCounts.Quadruple * roomPrices.QuadruplePrice;
+                        var tripleTotal = roomCounts.Triple * roomPrices.TriplePrice;
+                        var doubleTotal = roomCounts.Double * roomPrices.DoublePrice;
+                        var ChildTotal = roomCounts.Child * roomPrices.ChildPrice;
+                        var InfantTotal = roomCounts.Infant * roomPrices.InfantPrice;
+                        var subTotal = groupTotal + quadTotal + tripleTotal + doubleTotal + ChildTotal + InfantTotal;
+
+                        // Apply reduction
+                        var agencyTotalAmount = subTotal - customReduction;
+                        if (agencyTotalAmount < 0) agencyTotalAmount = 0;
+
+                        // Adult pilgrims (without child and infant)
+                        var adultPilgrims = roomCounts.Group + roomCounts.Quadruple + roomCounts.Triple + roomCounts.Double;
+
+                        // Commission = عمولة الوكالة × عدد المعتمرين البالغين (بدون أطفال ورضع)
+                        var totalCommission = agencyCommission * adultPilgrims;
+
+                        // Net profit
+                        var agencyNetProfit = agencyTotalAmount - totalCommission;
+                    }
+
+                    <!-- Room Price Summary -->
+                    <div class="bkg-price-summary">
+                        <label class="bkg-label">ملخص الأسعار</label>
+                        @if (roomCounts.Group > 0)
+                        {
+                            <div class="bkg-price-row"><span>جماعي (@roomCounts.Group × @roomPrices.GroupPrice.ToString("N0")):</span><span>@groupTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts.Quadruple > 0)
+                        {
+                            <div class="bkg-price-row"><span>رباعي (@roomCounts.Quadruple × @roomPrices.QuadruplePrice.ToString("N0")):</span><span>@quadTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts.Triple > 0)
+                        {
+                            <div class="bkg-price-row"><span>ثلاثي (@roomCounts.Triple × @roomPrices.TriplePrice.ToString("N0")):</span><span>@tripleTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts.Double > 0)
+                        {
+                            <div class="bkg-price-row"><span>ثنائي (@roomCounts.Double × @roomPrices.DoublePrice.ToString("N0")):</span><span>@doubleTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts.Child > 0)
+                        {
+                            <div class="bkg-price-row"><span>طفل (@roomCounts.Child × @roomPrices.ChildPrice.ToString("N0")):</span><span>@ChildTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts.Infant > 0)
+                        {
+                            <div class="bkg-price-row"><span>رضيع (@roomCounts.Infant × @roomPrices.InfantPrice.ToString("N0")):</span><span>@InfantTotal.ToString("N0") دج</span></div>
+                        }
+                        <div class="bkg-price-row" style="border-top:1px solid #e5e7eb; padding-top:0.3rem; margin-top:0.3rem;">
+                            <span>المجموع الفرعي:</span><span style="font-weight:700;">@subTotal.ToString("N0") دج</span>
+                        </div>
+                        @if (customReduction > 0)
+                        {
+                            <div class="bkg-price-row" style="color:#dc2626;">
+                                <span>تخفيض:</span><span>- @customReduction.ToString("N0") دج</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Commission Summary -->
+                    <div class="bkg-price-summary" style="margin-top:0.5rem; background:#fefce8; border-color:#fde68a;">
+                        <label class="bkg-label">العمولة</label>
+                        <div class="bkg-price-row">
+                            <span>البالغين (بدون أطفال ورضع):</span><span>@adultPilgrims معتمر</span>
+                        </div>
+                        <div class="bkg-price-row" style="font-weight:700;">
+                            <span>العمولة (@adultPilgrims × @agencyCommission.ToString("N0")):</span><span style="color:#dc2626;">@totalCommission.ToString("N0") دج</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Amount -->
+                    <div class="bkg-total">
+                        <span>المبلغ الإجمالي</span>
+                        <span class="bkg-total-val">@agencyTotalAmount.ToString("N0") دج</span>
+                    </div>
+
+                    <!-- Net Profit -->
+                    <div class="bkg-profit">
+                        <span class="bkg-profit-lbl">الربح الصافي</span>
+                        <span class="bkg-profit-val">@agencyNetProfit.ToString("N0") دج</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bkg-footer">
+                <button class="bkg-btn-cancel" @onclick="CancelAgencyBooking" disabled="@isAgencyBookingSaving">
+                    ✕ إلغاء
+                </button>
+                <button class="bkg-btn-save" @onclick="SaveAgencyBooking" disabled="@isAgencyBookingSaving">
+                    @if (isAgencyBookingSaving)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>🖨️ طباعة وحفظ</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Show Hotels Modal -->
+@if (showHotelsModal && hotelsTrip != null)
+{
+    <div class="htl-overlay" @onclick="CloseHotels">
+        <div class="htl-card htl-hotels-wide" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="htl-header">
+                <h3 class="htl-title" style="color:white">🏨 فنادق الرحلة</h3>
+                <button class="htl-close" @onclick="CloseHotels">✕</button>
+            </div>
+
+            <!-- Trip Info -->
+            <div class="htl-trip-info">
+                <span><strong>@hotelsTrip.TripNumber</strong></span>
+                <span>@hotelsTrip.DepartureDate.ToString("dd/MM/yyyy")</span>
+                <span>@hotelsTrip.Airline</span>
+                <span class="htl-trip-route">✈ @hotelsTrip.DepartureFrom → @hotelsTrip.ArrivalTo</span>
+            </div>
+
+            <!-- Global Child/Infant Pricing -->
+            <div class="htl-global-pricing">
+                <div class="htl-global-item">
+                    <span class="htl-global-label">👶 طفل بدون سرير</span>
+                    <span class="htl-global-price">@childPrice.ToString("N0") دج</span>
+                </div>
+                <div class="htl-global-item">
+                    <span class="htl-global-label">🍼 رضيع</span>
+                    <span class="htl-global-price">@infantPrice.ToString("N0") دج</span>
+                </div>
+            </div>
+
+            <!-- Hotels Grid -->
+            @if (tripHotels.Any())
+            {
+                <div class="htl-hotels-body">
+                    <div class="htl-hotels-grid">
+                        @foreach (var hotel in tripHotels)
+                        {
+                            <div class="htl-hotel-card">
+                                <div class="htl-hotel-name">@hotel.Name</div>
+                                <div class="htl-hotel-prices">
+                                    <div class="htl-hotel-price-row">
+                                        <span class="htl-room-label">جماعي</span>
+                                        <span class="htl-room-price">@hotel.GroupPrice.ToString("N0") دج</span>
+                                    </div>
+                                    <div class="htl-hotel-price-row">
+                                        <span class="htl-room-label">رباعي</span>
+                                        <span class="htl-room-price">@hotel.QuadruplePrice.ToString("N0") دج</span>
+                                    </div>
+                                    <div class="htl-hotel-price-row">
+                                        <span class="htl-room-label">ثلاثي</span>
+                                        <span class="htl-room-price">@hotel.TriplePrice.ToString("N0") دج</span>
+                                    </div>
+                                    <div class="htl-hotel-price-row">
+                                        <span class="htl-room-label">ثنائي</span>
+                                        <span class="htl-room-price">@hotel.DoublePrice.ToString("N0") دج</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="htl-no-hotels">
+                    <span>🏨</span>
+                    <p>لا توجد فنادق مضافة لهذه الرحلة</p>
+                </div>
+            }
+
+            <!-- Footer -->
+            <div class="htl-footer">
+                <button class="htl-btn-cancel" @onclick="CloseHotels">
+                    ✕ إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+
+<!-- Add Hotel Modal -->
+@if (showHotelModal && hotelTrip != null)
+{
+    <div class="htl-overlay" @onclick="CancelHotel">
+        <div class="htl-card" @onclick:stopPropagation="true">
+            <div class="htl-header">
+                <h3 class="htl-title" style="color: white;">🏨 إضافة فندق للرحلة</h3>
+                <button class="htl-close" @onclick="CancelHotel" disabled="@isSavingHotel">✕</button>
+            </div>
+
+            <div class="htl-body">
+                <div class="htl-summary">
+                    <div class="htl-summary-row"><span class="htl-summary-lbl">رقم الرحلة:</span><span class="htl-summary-val">@hotelTrip.TripNumber</span></div>
+                    <div class="htl-summary-row"><span class="htl-summary-lbl">التاريخ:</span><span class="htl-summary-val">@hotelTrip.DepartureDate.ToString("dd/MM/yyyy")</span></div>
+                    <div class="htl-summary-row"><span class="htl-summary-lbl">الخطوط:</span><span class="htl-summary-val">@hotelTrip.Airline</span></div>
+                    <div class="htl-route">✈ @hotelTrip.DepartureFrom → @hotelTrip.ArrivalTo</div>
+                </div>
+
+                <!-- Hotel Selection from hotels_info -->
+                <div class="htl-field">
+                    <label class="htl-label">اختر الفندق</label>
+                    <select class="htl-select" value="@selectedHotelInfoId" @onchange="OnHotelInfoChanged">
+                        <option value="0">اختر فندق...</option>
+                        @foreach (var h in availableHotelsInfo)
+                        {
+                            <option value="@h.Id">@h.Name - @h.Location</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Room Prices -->
+                <div class="htl-field">
+                    <label class="htl-label">أسعار الغرف</label>
+                    <div class="htl-prices">
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">جماعي</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="groupPrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">رباعي</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="quadruplePrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">ثلاثي</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="triplePrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">ثنائي</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="doublePrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">👶 طفل</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="hotelChildPrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                        <div class="htl-price-row">
+                            <span class="htl-price-type">🍼 رضيع</span>
+                            <input type="number" class="htl-input htl-price-input" @bind="hotelInfantPrice" step="1000" min="0" placeholder="السعر" />
+                            <span class="htl-currency">دج</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="htl-footer">
+                <button class="htl-btn-cancel" @onclick="CancelHotel" disabled="@isSavingHotel">✕ إلغاء</button>
+                <button class="htl-btn-save" @onclick="SaveHotel" disabled="@isSavingHotel">
+                    @if (isSavingHotel) { <span class="htl-spinner"></span><span>جاري الحفظ...</span> } else { <span>💾 حفظ</span> }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+
+<!-- Direct Pilgrim Booking Modal -->
+@if (showDirectBookingModal && directBookingTrip != null)
+{
+    <div class="bkg-overlay" @onclick="CancelDirectBooking">
+        <div class="bkg-card bkg-agency-wide" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="bkg-header" style="background: linear-gradient(135deg, #1b5e20, #2e7d32);">
+                <h3 class="bkg-title">🕋 تسجيل معتمر مباشر</h3>
+                <button class="bkg-close" @onclick="CancelDirectBooking" disabled="@isDirectBookingSaving">✕</button>
+            </div>
+
+            <!-- Trip Summary -->
+            <div class="bkg-summary">
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">رقم الرحلة:</span><span class="bkg-summary-val">@directBookingTrip.TripNumber</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">التاريخ:</span><span class="bkg-summary-val">@directBookingTrip.DepartureDate.ToString("dd/MM/yyyy")</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">الخطوط:</span><span class="bkg-summary-val">@directBookingTrip.Airline</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">المقاعد المتبقية:</span><span class="bkg-summary-val">@directBookingTrip.RemainingSeats</span></div>
+                <div class="bkg-route">✈ @directBookingTrip.DepartureFrom → @directBookingTrip.ArrivalTo</div>
+            </div>
+
+            <!-- Body - Two Columns -->
+            <div class="bkg-body">
+                <!-- Left Column - Personal Info -->
+                <div class="bkg-col">
+                    <div class="bkg-section-title">👤 معلومات المعتمر الرئيسي</div>
+
+                    <div class="bkg-field">
+                        <label class="bkg-label">الاسم الكامل *</label>
+                        <input type="text" class="bkg-input" @bind="directPilgrimName" placeholder="أدخل الاسم الكامل" />
+                    </div>
+
+                    <div class="bkg-field">
+                        <label class="bkg-label">رقم الهاتف *</label>
+                        <input type="text" class="bkg-input" @bind="directPilgrimPhone" placeholder="رقم الهاتف" dir="ltr" />
+                    </div>
+
+                    <div class="bkg-field">
+                        <label class="bkg-label">نوع الغرفة للمعتمر الرئيسي</label>
+                        <div class="bkg-btns">
+                            @foreach (var roomType in new[] { "جماعي", "رباعي", "ثلاثي", "ثنائي" })
+                            {
+                                <button class="bkg-btn @(mainPilgrimRoomType == roomType ? "active" : "")"
+                                        @onclick="() => mainPilgrimRoomType = roomType">
+                                    @roomType
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="bkg-field">
+                        <label class="bkg-label">العنوان</label>
+                        <input type="text" class="bkg-input" @bind="directPilgrimAddress" placeholder="العنوان (اختياري)" />
+                    </div>
+
+                    <div class="bkg-section-title" style="margin-top: 1rem;">👨‍👩‍👧‍👦 أفراد العائلة / المجموعة</div>
+
+                    <!-- Family Members List -->
+                    <div class="family-members">
+                        @for (int i = 0; i < familyMembers.Count; i++)
+                        {
+                            var index = i; // Capture for lambda
+                            <div class="family-member-row">
+                                <input type="text" class="bkg-input" style="flex:1;min-width:100px;"
+                                       @bind="familyMembers[index].Name"
+                                       @bind:event="oninput"
+                                       placeholder="الاسم" />
+                                <select class="bkg-input" style="width:80px;" @bind="familyMembers[index].Relation">
+                                    <option value="زوجة">زوجة</option>
+                                    <option value="ابن">ابن</option>
+                                    <option value="ابنة">ابنة</option>
+                                    <option value="أم">أم</option>
+                                    <option value="أب">أب</option>
+                                    <option value="أخ">أخ</option>
+                                    <option value="أخت">أخت</option>
+                                    <option value="صديق">صديق</option>
+                                    <option value="قريب">قريب</option>
+                                </select>
+                                <select class="bkg-input" style="width:80px;" @bind="familyMembers[index].RoomType">
+                                    <option value="جماعي">جماعي</option>
+                                    <option value="رباعي">رباعي</option>
+                                    <option value="ثلاثي">ثلاثي</option>
+                                    <option value="ثنائي">ثنائي</option>
+                                    <option value="طفل">طفل</option>
+                                    <option value="رضيع">رضيع</option>
+                                </select>
+                                <button class="family-remove-btn" @onclick="() => RemoveFamilyMember(index)" title="حذف">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <button class="add-family-btn" @onclick="AddFamilyMember">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>إضافة فرد</span>
+                    </button>
+
+                    @{
+                        var totalPilgrims = 1 + familyMembers.Count;
+                    }
+                    <div class="bkg-total-pilgrims" style="margin-top: 0.5rem;">
+                        <span>إجمالي المعتمرين:</span>
+                        <strong>@totalPilgrims</strong>
+                    </div>
+                </div>
+
+                <!-- Right Column - Hotel & Pricing -->
+                <div class="bkg-col">
+                    <!-- Hotel -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الفندق</label>
+                        <div class="bkg-btns">
+                            @foreach (var hotel in directBookingHotels)
+                            {
+                                <button class="bkg-btn @(selectedDirectHotel == hotel ? "active" : "")"
+                                        @onclick="() => SelectDirectHotel(hotel)">
+                                    @hotel
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Room Distribution Summary -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">ملخص توزيع الغرف</label>
+                        <div class="room-summary-box">
+                            <div class="room-summary-row">
+                                <span>@mainPilgrimRoomType (المعتمر الرئيسي)</span><span>1</span>
+                            </div>
+                            @foreach (var room in familyMembers.GroupBy(m => m.RoomType).Select(g => new { Type = g.Key, Count = g.Count() }))
+                            {
+                                <div class="room-summary-row">
+                                    <span>@room.Type</span><span>@room.Count</span>
+                                </div>
+                            }
+                            @if (!familyMembers.Any())
+                            {
+                                <div class="room-summary-row" style="color:#9ca3af;">
+                                    <span>لا يوجد أفراد إضافيين</span><span>-</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Pricing by Room Type -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">أسعار الغرف (دج)</label>
+                        <div class="bkg-room-dist">
+                            @foreach (var price in new[] {
+                                new { Type = "جماعي", Value = directPrices.GroupPrice, Bind = "GroupPrice" },
+                                new { Type = "رباعي", Value = directPrices.QuadruplePrice, Bind = "QuadruplePrice" },
+                                new { Type = "ثلاثي", Value = directPrices.TriplePrice, Bind = "TriplePrice" },
+                                new { Type = "ثنائي", Value = directPrices.DoublePrice, Bind = "DoublePrice" },
+                                new { Type = "طفل", Value = directPrices.ChildPrice, Bind = "ChildPrice" },
+                                new { Type = "رضيع", Value = directPrices.InfantPrice, Bind = "InfantPrice" }
+                            })
+                            {
+                                <div class="bkg-room-row">
+                                    <span class="bkg-room-type">@price.Type</span>
+                                    <input type="number" class="bkg-input bkg-price-input"
+                                           value="@price.Value.ToString("0")"
+                                           @onchange="(e) => UpdateDirectPrice(price.Bind, e)"
+                                           step="1000" min="0" />
+                                    <span>دج</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Discount -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">تخفيض / خصم (دج)</label>
+                        <input type="number" class="bkg-input" @bind="directDiscount" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Calculations -->
+                    @{
+                        // Count pilgrims by room type (including main pilgrim)
+                        var roomCounts = new Dictionary<string, int> { ["جماعي"] = 0, ["رباعي"] = 0, ["ثلاثي"] = 0, ["ثنائي"] = 0, ["طفل"] = 0, ["رضيع"] = 0 };
+                        roomCounts[mainPilgrimRoomType] = 1;
+                        foreach (var m in familyMembers)
+                        {
+                            if (roomCounts.ContainsKey(m.RoomType))
+                                roomCounts[m.RoomType]++;
+                        }
+
+                        var directGroupTotal = roomCounts["جماعي"] * directPrices.GroupPrice;
+                        var directQuadTotal = roomCounts["رباعي"] * directPrices.QuadruplePrice;
+                        var directTripleTotal = roomCounts["ثلاثي"] * directPrices.TriplePrice;
+                        var directDoubleTotal = roomCounts["ثنائي"] * directPrices.DoublePrice;
+                        var directChildTotal = roomCounts["طفل"] * directPrices.ChildPrice;
+                        var directInfantTotal = roomCounts["رضيع"] * directPrices.InfantPrice;
+                        var directSubTotal = directGroupTotal + directQuadTotal + directTripleTotal + directDoubleTotal + directChildTotal + directInfantTotal;
+                        var directTotalAmount = directSubTotal - directDiscount;
+                        if (directTotalAmount < 0) directTotalAmount = 0;
+                    }
+
+                    <!-- Price Summary -->
+                    <div class="bkg-price-summary">
+                        <label class="bkg-label">ملخص المبلغ</label>
+                        @if (roomCounts["جماعي"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>جماعي (@roomCounts["جماعي"])</span><span>@directGroupTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts["رباعي"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>رباعي (@roomCounts["رباعي"])</span><span>@directQuadTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts["ثلاثي"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>ثلاثي (@roomCounts["ثلاثي"])</span><span>@directTripleTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts["ثنائي"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>ثنائي (@roomCounts["ثنائي"])</span><span>@directDoubleTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts["طفل"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>طفل (@roomCounts["طفل"])</span><span>@directChildTotal.ToString("N0") دج</span></div>
+                        }
+                        @if (roomCounts["رضيع"] > 0)
+                        {
+                            <div class="bkg-price-row"><span>رضيع (@roomCounts["رضيع"])</span><span>@directInfantTotal.ToString("N0") دج</span></div>
+                        }
+                        <div class="bkg-price-row" style="border-top:1px solid #e5e7eb; padding-top:0.3rem; margin-top:0.3rem;">
+                            <span>المجموع الفرعي:</span><span style="font-weight:700;">@directSubTotal.ToString("N0") دج</span>
+                        </div>
+                        @if (directDiscount > 0)
+                        {
+                            <div class="bkg-price-row" style="color:#dc2626;"><span>تخفيض:</span><span>- @directDiscount.ToString("N0") دج</span></div>
+                        }
+                    </div>
+
+                    <!-- Total -->
+                    <div class="bkg-total">
+                        <span>المبلغ الإجمالي</span>
+                        <span class="bkg-total-val">@directTotalAmount.ToString("N0") دج</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bkg-footer">
+                <button class="bkg-btn-cancel" @onclick="CancelDirectBooking" disabled="@isDirectBookingSaving">
+                    ✕ إلغاء
+                </button>
+                <button class="bkg-btn-save" @onclick="SaveDirectBooking" disabled="@isDirectBookingSaving">
+                    @if (isDirectBookingSaving)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>🖨️ طباعة وحفظ</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+@code {
+    private List<Trip> allTrips = new List<Trip>();
+    private List<Trip> filteredTrips = new List<Trip>();
+    private string searchQuery = "";
+    private bool isLoading = true;
+    private int totalTrips = 0;
+    private int directTrips = 0;
+    private int indirectTrips = 0;
+
+    // Delete functionality
+    private bool showDeleteModal = false;
+    private Trip tripToDelete = null;
+    private bool isDeleting = false;
+
+    // Toast notification
+    private bool showToast = false;
+    private bool toastSuccess = false;
+    private string toastMessage = "";
+
+
+    private async Task LoadTripsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            allTrips = await TripService.GetAllTripsAsync();
+            totalTrips = allTrips.Count;
+            directTrips = allTrips.Count(t => t.TripType == "مباشرة");
+            indirectTrips = allTrips.Count(t => t.TripType == "غير مباشرة");
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, "حدث خطأ أثناء تحميل الرحلات");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (allTrips == null) return;
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredTrips = allTrips.ToList();
+        }
+        else
+        {
+            var query = searchQuery.ToLower();
+            filteredTrips = allTrips.Where(t =>
+                (t.TripNumber?.ToLower().Contains(query) ?? false) ||
+                (t.TripName?.ToLower().Contains(query) ?? false) ||
+                (t.DepartureFrom?.ToLower().Contains(query) ?? false) ||
+                (t.ArrivalTo?.ToLower().Contains(query) ?? false) ||
+                (t.Airline?.ToLower().Contains(query) ?? false) ||
+                (t.Program?.ToLower().Contains(query) ?? false) ||
+                (t.TripType?.ToLower().Contains(query) ?? false)
+            ).ToList();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleSearch();
+    }
+
+    private async Task HandleSearch()
+    {
+        try
+        {
+            isLoading = true;
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+                filteredTrips = await TripService.SearchTripsAsync(searchQuery);
+            else
+                ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, "حدث خطأ أثناء البحث");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchQuery = "";
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async void SetSearchQuery(string query)
+    {
+        searchQuery = query;
+        await HandleSearch();
+    }
+
+    // Delete
+    private void ConfirmDelete(Trip trip) { tripToDelete = trip; showDeleteModal = true; }
+    private void CancelDelete() { if (!isDeleting) { showDeleteModal = false; tripToDelete = null; } }
+    private async Task DeleteTrip()
+    {
+        if (tripToDelete == null) return;
+        try
+        {
+            isDeleting = true; StateHasChanged();
+            var success = await TripService.DeleteTripAsync(tripToDelete.Id);
+            if (success)
+            {
+                ShowToast(true, "تم حذف الرحلة بنجاح");
+                showDeleteModal = false; tripToDelete = null;
+                await LoadTripsAsync();
+            }
+            else ShowToast(false, "فشل حذف الرحلة");
+        }
+        catch { ShowToast(false, "حدث خطأ أثناء حذف الرحلة"); }
+        finally { isDeleting = false; StateHasChanged(); }
+    }
+
+    private void ShowToast(bool success, string message)
+    {
+        toastSuccess = success; toastMessage = message; showToast = true;
+        _ = Task.Run(async () => { await Task.Delay(3000); showToast = false; await InvokeAsync(StateHasChanged); });
+    }
+
+    // Edit
+    private bool showEditModal = false;
+    private Trip editModel = new Trip();
+    private bool isSaving = false;
+    private string editErrorMessage = "";
+
+    private void OpenEditModal(Trip trip)
+    {
+        editModel = new Trip { Id = trip.Id, TripName = trip.TripName, TripNumber = trip.TripNumber, DepartureDate = trip.DepartureDate, TripType = trip.TripType, TotalSeats = trip.TotalSeats, FilledSeats = trip.FilledSeats, Airline = trip.Airline, DepartureFrom = trip.DepartureFrom, ArrivalTo = trip.ArrivalTo, Program = trip.Program };
+        editErrorMessage = ""; showEditModal = true;
+    }
+    private void CancelEdit() { if (!isSaving) { showEditModal = false; editModel = new Trip(); editErrorMessage = ""; } }
+    private async Task HandleEditSubmit()
+    {
+        try
+        {
+            isSaving = true; editErrorMessage = ""; StateHasChanged();
+            if (editModel.FilledSeats > editModel.TotalSeats) { editErrorMessage = "عدد المقاعد المحجوزة لا يمكن أن يتجاوز العدد الكلي"; isSaving = false; StateHasChanged(); return; }
+            var success = await TripService.UpdateTripAsync(editModel);
+            if (success) { ShowToast(true, "تم تحديث الرحلة بنجاح"); showEditModal = false; editModel = new Trip(); await LoadTripsAsync(); }
+            else editErrorMessage = "فشل تحديث الرحلة";
+        }
+        catch { editErrorMessage = "حدث خطأ أثناء تحديث الرحلة"; }
+        finally { isSaving = false; StateHasChanged(); }
+    }
+
+    // Pilgrim Booking
+    private bool showBookingModal = false;
+    private Trip bookingTrip = null;
+    private bool isBookingSaving = false;
+    private string pilgrimName = "";
+    private int pilgrimCount = 1;
+    private string selectedHotel = "مورو";
+    private string customHotel = "";
+    private string selectedRoomType = "ثلاثي";
+    private decimal pricePerPerson = 85000;
+    private decimal mediatorCommission = 5000;
+    private string mediatorName = "";
+
+    private void AddAgencyBooking(int tripId) { var trip = allTrips.FirstOrDefault(t => t.Id == tripId); if (trip != null) OpenBookingModal(trip); }
+    private void OpenBookingModal(Trip trip) { bookingTrip = trip; ResetBookingForm(); showBookingModal = true; }
+    private void ResetBookingForm() { pilgrimName = ""; pilgrimCount = 1; selectedHotel = "مورو"; customHotel = ""; selectedRoomType = "ثلاثي"; pricePerPerson = 85000; mediatorCommission = 5000; mediatorName = ""; }
+    private void CancelBooking() { if (!isBookingSaving) { showBookingModal = false; bookingTrip = null; } }
+    private async Task SaveBooking()
+    {
+        try
+        {
+            isBookingSaving = true; StateHasChanged();
+            var hotel = selectedHotel == "أخرى" ? customHotel : selectedHotel;
+            ShowToast(true, "تم حفظ الحجز بنجاح");
+            showBookingModal = false; bookingTrip = null;
+            await LoadTripsAsync();
+        }
+        catch { ShowToast(false, "حدث خطأ أثناء حفظ الحجز"); }
+        finally { isBookingSaving = false; StateHasChanged(); }
+    }
+
+    // Agency Booking
+    private bool showAgencyBookingModal = false;
+    private Trip agencyBookingTrip = null;
+    private bool isAgencyBookingSaving = false;
+    private string selectedAgency = "";
+    private string selectedAgencyHotel = "مورو";
+    private string agencyCustomHotel = "";
+    private decimal agencyCommission = 5000;
+    private decimal customReduction = 0;
+
+    // Remove this:
+    // private List<string> agencies = new List<string> { "وكالة الأنوار", "وكالة الإيمان", "وكالة التقوى", "وكالة الصفا", "وكالة المروة" };
+    // Add this:
+    private List<Agency> agenciesList = new List<Agency>();
+    private List<string> agencyNames = new List<string>();
+
+    private AgencyRoomCounts roomCounts = new AgencyRoomCounts();
+    private AgencyRoomPrices roomPrices = new AgencyRoomPrices();
+    private List<string> agencyHotels = new List<string>();
+    private int totalAgencyPilgrims => roomCounts.Group + roomCounts.Quadruple + roomCounts.Triple + roomCounts.Double + roomCounts.Child + roomCounts.Infant;
+
+    private class AgencyRoomCounts
+    {
+        public int Group { get; set; }
+        public int Quadruple { get; set; }
+        public int Triple { get; set; }
+        public int Double { get; set; }
+        public int Child { get; set; }
+        public int Infant { get; set; }
+    }
+
+    private class AgencyRoomPrices
+    {
+        public decimal GroupPrice { get; set; } = 65000;
+        public decimal QuadruplePrice { get; set; } = 75000;
+        public decimal TriplePrice { get; set; } = 85000;
+        public decimal DoublePrice { get; set; } = 95000;
+        public decimal ChildPrice { get; set; } = 45000;
+        public decimal InfantPrice { get; set; } = 15000;
+    }
+
+    private async void OpenAgencyBookingModal(Trip trip)
+    {
+        agencyBookingTrip = trip;
+        ResetAgencyForm();
+        await LoadAgencies();
+        await LoadAgencyHotels(trip.Id);
+        showAgencyBookingModal = true;
+        StateHasChanged();
+    }
+
+    private async Task LoadAgencyHotels(int tripId)
+    {
+        try
+        {
+            agencyHotels = await HotelService.GetHotelNamesByTripIdAsync(tripId);
+            if (!agencyHotels.Any()) agencyHotels = new List<string> { "لا توجد فنادق" };
+        }
+        catch
+        {
+            agencyHotels = new List<string> { "لا توجد فنادق" };
+        }
+    }
+
+    private async Task LoadAgencies()
+    {
+        try
+        {
+            agenciesList = await AgencyService.GetAllAgenciesAsync();
+            agencyNames = agenciesList.Select(a => a.AgencyName).ToList();
+            if (!agencyNames.Any())
+            {
+                agencyNames = new List<string> { "لا توجد وكالات" };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading agencies: {ex.Message}");
+            agencyNames = new List<string> { "لا توجد وكالات" };
+        }
+    }
+
+    private async Task SelectAgencyHotel(string hotel)
+    {
+        selectedAgencyHotel = hotel;
+        if (hotel != "أخرى" && hotel != "لا توجد فنادق" && agencyBookingTrip != null)
+        {
+            await LoadHotelPrices(hotel, agencyBookingTrip.Id);
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadHotelPrices(string hotelName, int tripId)
+    {
+        try
+        {
+            var hotel = await HotelService.GetHotelByNameAndTripAsync(hotelName, tripId);
+            if (hotel != null)
+            {
+                roomPrices = new AgencyRoomPrices
+                {
+                    GroupPrice = hotel.GroupPrice,
+                    QuadruplePrice = hotel.QuadruplePrice,
+                    TriplePrice = hotel.TriplePrice,
+                    DoublePrice = hotel.DoublePrice,
+                    ChildPrice = hotel.ChildPrice,
+                    InfantPrice = hotel.InfantPrice
+                };
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private void ResetAgencyForm()
+    {
+        selectedAgency = "";
+        selectedAgencyHotel = "مورو";
+        agencyCustomHotel = "";
+        agencyCommission = 5000;
+        customReduction = 0;
+        roomCounts = new AgencyRoomCounts();
+        roomPrices = new AgencyRoomPrices();
+    }
+    private void CancelAgencyBooking() { if (!isAgencyBookingSaving) { showAgencyBookingModal = false; agencyBookingTrip = null; } }
+    // private async Task SaveAgencyBooking()
+    // {
+    //     try
+    //     {
+    //         isAgencyBookingSaving = true; StateHasChanged();
+    //         await Task.Delay(500);
+    //         ShowToast(true, "تم حفظ حجز الوكالة بنجاح");
+    //         showAgencyBookingModal = false; agencyBookingTrip = null;
+    //         await LoadTripsAsync();
+    //     }
+    //     catch { ShowToast(false, "حدث خطأ أثناء حفظ الحجز"); }
+    //     finally { isAgencyBookingSaving = false; StateHasChanged(); }
+    // }
+
+    private async Task SaveAgencyBooking()
+    {
+        try
+        {
+            isAgencyBookingSaving = true;
+            StateHasChanged();
+
+            var groupTotal = roomCounts.Group * roomPrices.GroupPrice;
+            var quadTotal = roomCounts.Quadruple * roomPrices.QuadruplePrice;
+            var tripleTotal = roomCounts.Triple * roomPrices.TriplePrice;
+            var doubleTotal = roomCounts.Double * roomPrices.DoublePrice;
+            var childTotal = roomCounts.Child * roomPrices.ChildPrice;
+            var infantTotal = roomCounts.Infant * roomPrices.InfantPrice;
+
+            // Calculate total WITH reduction
+            var subTotal = groupTotal + quadTotal + tripleTotal + doubleTotal + childTotal + infantTotal;
+            var totalAmount = subTotal - customReduction;
+            if (totalAmount < 0) totalAmount = 0;
+
+            var adultPilgrims = roomCounts.Group + roomCounts.Quadruple + roomCounts.Triple + roomCounts.Double;
+            var totalCommission = agencyCommission * adultPilgrims;
+
+            var agency = agenciesList.FirstOrDefault(a => a.AgencyName == selectedAgency);
+
+            var booking = new AgencyBooking
+            {
+                TripId = agencyBookingTrip.Id,
+                AgencyId = agency?.AgencyId,
+                AgencyName = selectedAgency,
+                HotelName = selectedAgencyHotel == "أخرى" ? agencyCustomHotel : selectedAgencyHotel,
+                GroupCount = roomCounts.Group,
+                QuadrupleCount = roomCounts.Quadruple,
+                TripleCount = roomCounts.Triple,
+                DoubleCount = roomCounts.Double,
+                ChildCount = roomCounts.Child,
+                InfantCount = roomCounts.Infant,
+                GroupPrice = roomPrices.GroupPrice,
+                QuadruplePrice = roomPrices.QuadruplePrice,
+                TriplePrice = roomPrices.TriplePrice,
+                DoublePrice = roomPrices.DoublePrice,
+                ChildPrice = roomPrices.ChildPrice,
+                InfantPrice = roomPrices.InfantPrice,
+                TotalAmount = totalAmount,
+                Commission = totalCommission,
+                Reduction = customReduction,
+                Status = "confirmed"
+            };
+
+            var success = await AgencyBookingService.CreateAsync(booking);
+
+            if (success)
+            {
+                ShowToast(true, "تم حفظ حجز الوكالة بنجاح");
+                showAgencyBookingModal = false;
+                agencyBookingTrip = null;
+
+                await Task.Delay(300); // Wait for DB trigger to complete
+                await LoadTripsAsync(); // Reload from DB
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, "حدث خطأ أثناء حفظ الحجز");
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isAgencyBookingSaving = false;
+            StateHasChanged();
+        }
+    }
+
+
+    // Hotel modal
+    @inject HotelInfoService HotelInfoService
+
+    private bool showHotelModal = false;
+    private Trip hotelTrip = null;
+    private bool isSavingHotel = false;
+    private string hotelName = "";
+    private decimal groupPrice = 65000;
+    private decimal quadruplePrice = 75000;
+    private decimal triplePrice = 85000;
+    private decimal doublePrice = 95000;
+    private decimal hotelChildPrice = 145000;    // Renamed
+    private decimal hotelInfantPrice = 18000;    // Renamed
+    private List<HotelInfo> availableHotelsInfo = new();
+    private int selectedHotelInfoId = 0;
+
+    private void ResetHotelForm()
+    {
+        hotelName = "";
+        groupPrice = 00;
+        quadruplePrice = 00;
+        triplePrice = 00;
+        doublePrice = 00;
+        hotelChildPrice = 145000;
+        hotelInfantPrice = 18000;
+        selectedHotelInfoId = 0;
+    }
+    private async void OpenHotelModal(Trip trip)
+    {
+        hotelTrip = trip;
+        ResetHotelForm();
+        availableHotelsInfo = await HotelInfoService.GetAllAsync();
+        showHotelModal = true;
+        StateHasChanged();
+    }
+
+
+    private async Task OnHotelInfoChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id) && id > 0)
+        {
+            selectedHotelInfoId = id;
+            var hotelInfo = availableHotelsInfo.FirstOrDefault(h => h.Id == id);
+            if (hotelInfo != null)
+            {
+                hotelName = hotelInfo.Name;
+            }
+        }
+        else
+        {
+            selectedHotelInfoId = 0;
+            hotelName = "";
+        }
+        StateHasChanged();
+    }
+
+    private void CancelHotel() { if (!isSavingHotel) { showHotelModal = false; hotelTrip = null; } }
+
+    private async Task SaveHotel()
+    {
+        if (string.IsNullOrWhiteSpace(hotelName) || hotelTrip == null) return;
+
+        try
+        {
+            isSavingHotel = true; StateHasChanged();
+
+            var hotel = new Hotel
+            {
+                TripId = hotelTrip.Id,
+                Name = hotelName,
+                GroupPrice = groupPrice,
+                QuadruplePrice = quadruplePrice,
+                TriplePrice = triplePrice,
+                DoublePrice = doublePrice,
+                ChildPrice = hotelChildPrice,
+                InfantPrice = hotelInfantPrice
+            };
+
+            await HotelService.AddHotelAsync(hotel);
+            ShowToast(true, "تم حفظ الفندق بنجاح");
+            showHotelModal = false; hotelTrip = null;
+            await LoadTripsAsync();
+        }
+        catch { ShowToast(false, "حدث خطأ أثناء حفظ الفندق"); }
+        finally { isSavingHotel = false; StateHasChanged(); }
+    }
+
+    // Show Hotels modal
+    private bool showHotelsModal = false;
+    private Trip hotelsTrip = null;
+    private decimal childPrice = 45000;
+    private decimal infantPrice = 15000;
+    private List<TripHotel> tripHotels = new List<TripHotel>();
+
+    private class TripHotel
+    {
+        public string Name { get; set; }
+        public decimal GroupPrice { get; set; }
+        public decimal QuadruplePrice { get; set; }
+        public decimal TriplePrice { get; set; }
+        public decimal DoublePrice { get; set; }
+    }
+
+    private async void OpenHotelsModal(Trip trip)
+    {
+        hotelsTrip = trip;
+        await LoadTripHotels(trip.Id);
+        showHotelsModal = true;
+        StateHasChanged();
+    }
+
+    private async Task LoadTripHotels(int tripId)
+    {
+        try
+        {
+            var hotels = await HotelService.GetHotelsByTripIdAsync(tripId);
+            tripHotels = hotels.Select(h => new TripHotel
+            {
+                Name = h.Name,
+                GroupPrice = h.GroupPrice,
+                QuadruplePrice = h.QuadruplePrice,
+                TriplePrice = h.TriplePrice,
+                DoublePrice = h.DoublePrice
+            }).ToList();
+            if (hotels.Any())
+            {
+                childPrice = hotels.First().ChildPrice;
+                infantPrice = hotels.First().InfantPrice;
+            }
+        }
+        catch
+        {
+            tripHotels = new List<TripHotel>();
+        }
+    }
+
+    private void CloseHotels()
+    {
+        showHotelsModal = false;
+        hotelsTrip = null;
+        tripHotels = new List<TripHotel>();
+    }
+
+    // =============================================
+    // Direct Pilgrim Booking
+    private bool showDirectBookingModal = false;
+    private Trip directBookingTrip = null;
+    private bool isDirectBookingSaving = false;
+    private string directPilgrimName = "";
+    private string directPilgrimPhone = "";
+    private string directPilgrimAddress = "";
+    private string mainPilgrimRoomType = "ثلاثي"; // NEW - room type for main pilgrim
+    private string selectedDirectHotel = "مورو";
+    private decimal directDiscount = 0;
+    private List<string> directBookingHotels = new List<string>();
+    private List<FamilyMember> familyMembers = new List<FamilyMember>();
+    private DirectPrices directPrices = new DirectPrices();
+
+    private class FamilyMember
+    {
+        public string Name { get; set; } = "";
+        public string Relation { get; set; } = "زوجة";
+        public string RoomType { get; set; } = "ثلاثي";
+    }
+
+    private class DirectPrices
+    {
+        public decimal GroupPrice { get; set; } = 65000;
+        public decimal QuadruplePrice { get; set; } = 75000;
+        public decimal TriplePrice { get; set; } = 85000;
+        public decimal DoublePrice { get; set; } = 95000;
+        public decimal ChildPrice { get; set; } = 45000;
+        public decimal InfantPrice { get; set; } = 15000;
+    }
+
+    private void UpdateDirectPrice(string priceType, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var value))
+        {
+            switch (priceType)
+            {
+                case "GroupPrice": directPrices.GroupPrice = value; break;
+                case "QuadruplePrice": directPrices.QuadruplePrice = value; break;
+                case "TriplePrice": directPrices.TriplePrice = value; break;
+                case "DoublePrice": directPrices.DoublePrice = value; break;
+                case "ChildPrice": directPrices.ChildPrice = value; break;
+                case "InfantPrice": directPrices.InfantPrice = value; break;
+            }
+        }
+    }
+
+    private async void OpenDirectBookingModal(Trip trip)
+    {
+        directBookingTrip = trip;
+        directPilgrimName = "";
+        directPilgrimPhone = "";
+        directPilgrimAddress = "";
+        mainPilgrimRoomType = "ثلاثي";
+        selectedDirectHotel = "مورو";
+        directDiscount = 0;
+        familyMembers = new List<FamilyMember>();
+        directPrices = new DirectPrices();
+        await LoadDirectBookingHotels(trip.Id);
+        showDirectBookingModal = true;
+        StateHasChanged();
+    }
+
+    private async Task LoadDirectBookingHotels(int tripId)
+    {
+        try
+        {
+            directBookingHotels = await HotelService.GetHotelNamesByTripIdAsync(tripId);
+            if (!directBookingHotels.Any()) directBookingHotels = new List<string> { "لا توجد فنادق" };
+        }
+        catch { directBookingHotels = new List<string> { "لا توجد فنادق" }; }
+    }
+
+    private async Task SelectDirectHotel(string hotel)
+    {
+        selectedDirectHotel = hotel;
+        if (hotel != "لا توجد فنادق" && directBookingTrip != null)
+        {
+            var hotelData = await HotelService.GetHotelByNameAndTripAsync(hotel, directBookingTrip.Id);
+            if (hotelData != null)
+            {
+                directPrices = new DirectPrices
+                {
+                    GroupPrice = hotelData.GroupPrice,
+                    QuadruplePrice = hotelData.QuadruplePrice,
+                    TriplePrice = hotelData.TriplePrice,
+                    DoublePrice = hotelData.DoublePrice,
+                    ChildPrice = hotelData.ChildPrice,
+                    InfantPrice = hotelData.InfantPrice
+                };
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void AddFamilyMember()
+    {
+        familyMembers.Add(new FamilyMember { Name = "", Relation = "زوجة", RoomType = "ثلاثي" });
+        StateHasChanged();
+    }
+
+    private void RemoveFamilyMember(int index)
+    {
+        if (index >= 0 && index < familyMembers.Count)
+        {
+            familyMembers.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void CancelDirectBooking()
+    {
+        if (!isDirectBookingSaving)
+        {
+            showDirectBookingModal = false;
+            directBookingTrip = null;
+        }
+    }
+
+    private async Task SaveDirectBooking()
+    {
+        if (string.IsNullOrWhiteSpace(directPilgrimName) || directBookingTrip == null) return;
+
+        try
+        {
+            isDirectBookingSaving = true;
+            StateHasChanged();
+
+            // Count pilgrims by room type
+            var roomCounts = new Dictionary<string, int> { ["جماعي"] = 0, ["رباعي"] = 0, ["ثلاثي"] = 0, ["ثنائي"] = 0, ["طفل"] = 0, ["رضيع"] = 0 };
+            roomCounts[mainPilgrimRoomType] = 1;
+            foreach (var m in familyMembers)
+            {
+                if (roomCounts.ContainsKey(m.RoomType))
+                    roomCounts[m.RoomType]++;
+            }
+
+            var totalAmount = roomCounts["جماعي"] * directPrices.GroupPrice +
+                              roomCounts["رباعي"] * directPrices.QuadruplePrice +
+                              roomCounts["ثلاثي"] * directPrices.TriplePrice +
+                              roomCounts["ثنائي"] * directPrices.DoublePrice +
+                              roomCounts["طفل"] * directPrices.ChildPrice +
+                              roomCounts["رضيع"] * directPrices.InfantPrice;
+
+            var netAmount = totalAmount - directDiscount;
+            if (netAmount < 0) netAmount = 0;
+
+            // Save direct pilgrim
+            var pilgrim = new DirectPilgrim
+            {
+                TripId = directBookingTrip.Id,
+                MainPilgrimName = directPilgrimName,
+                MainPilgrimPhone = directPilgrimPhone,
+                MainPilgrimAddress = directPilgrimAddress,
+                MainPilgrimRoomType = mainPilgrimRoomType,
+                HotelName = selectedDirectHotel,
+                TotalPilgrims = 1 + familyMembers.Count,
+                TotalAmount = totalAmount,
+                Discount = directDiscount,
+                NetAmount = netAmount,
+                PaidAmount = 0, // Initially no payment
+                Notes = $"تسجيل مباشر - {directBookingTrip.TripNumber}",
+                FamilyMembers = familyMembers.Select(m => new DirectPilgrimFamily
+                {
+                    Name = m.Name,
+                    Relation = m.Relation,
+                    RoomType = m.RoomType
+                }).ToList()
+            };
+
+            await DirectPilgrimService.CreateAsync(pilgrim);
+
+            // Get or create local agency
+            // Get or create local agency - FIXED
+            var localAgency = agenciesList.FirstOrDefault(a =>
+                a.AgencyName == "الوكالة المحلية" && a.AgencyType == "مكتب");
+
+            if (localAgency == null)
+            {
+                // Try to get ALL agencies including any inactive ones
+                var allAgencies = await AgencyService.GetAllAgenciesAdminAsync();
+                localAgency = allAgencies.FirstOrDefault(a =>
+                    a.AgencyName == "الوكالة المحلية");
+            }
+
+            Guid? agencyId = localAgency?.AgencyId;
+
+            if (agencyId == null || agencyId == Guid.Empty)
+            {
+                // Create only ONE local agency
+                var newAgency = new Agency
+                {
+                    AgencyName = "الوكالة المحلية",
+                    AgencyType = "مكتب",
+                    City = "المكتب",
+                    Status = "Active",
+                    CommissionRate = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                var success = await AgencyService.CreateAgencyAsync(newAgency);
+                if (success)
+                {
+                    agencyId = newAgency.AgencyId;
+                }
+            }
+
+            // Create agency booking linked to local agency
+            if (agencyId.HasValue)
+            {
+                var booking = new AgencyBooking
+                {
+                    TripId = directBookingTrip.Id,
+                    AgencyId = agencyId.Value,
+                    AgencyName = "الوكالة المحلية",
+                    HotelName = selectedDirectHotel,
+                    GroupCount = roomCounts["جماعي"],
+                    QuadrupleCount = roomCounts["رباعي"],
+                    TripleCount = roomCounts["ثلاثي"],
+                    DoubleCount = roomCounts["ثنائي"],
+                    ChildCount = roomCounts["طفل"],
+                    InfantCount = roomCounts["رضيع"],
+                    GroupPrice = directPrices.GroupPrice,
+                    QuadruplePrice = directPrices.QuadruplePrice,
+                    TriplePrice = directPrices.TriplePrice,
+                    DoublePrice = directPrices.DoublePrice,
+                    ChildPrice = directPrices.ChildPrice,
+                    InfantPrice = directPrices.InfantPrice,
+                    TotalAmount = totalAmount,
+                    Commission = 0,
+                    Reduction = directDiscount,
+                    Status = "confirmed"
+                };
+
+                await AgencyBookingService.CreateAsync(booking);
+            }
+
+            ShowToast(true, "تم تسجيل المعتمرين بنجاح");
+            showDirectBookingModal = false;
+            directBookingTrip = null;
+            await Task.Delay(300);
+            await LoadTripsAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowToast(false, "حدث خطأ أثناء الحفظ");
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isDirectBookingSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    
+    // Add these new variables
+    private Dictionary<int, TripGuide> tripGuides = new Dictionary<int, TripGuide>();
+
+    // Guide Modal
+    private bool showGuideModal = false;
+    private Trip guideTrip = null;
+    private TripGuide existingGuide = null;
+    private string guideName = "";
+    private string guideAgency = "";
+    private decimal guideGrantAmount = 0;
+    private bool isSavingGuide = false;
+    private string guideError = "";
+
+    // Modify OnInitializedAsync
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("=== TripsGallery Initializing ===");
+        Console.WriteLine($"TripGuideService is null: {TripGuideService == null}");
+
+        await LoadAgencies();
+        await LoadTripsAsync();
+        await LoadAllGuides();
+
+        Console.WriteLine($"Loaded {tripGuides.Count} guides");
+    }
+
+    private async Task LoadAllGuides()
+    {
+        try
+        {
+            tripGuides.Clear();
+            Console.WriteLine($"Loading guides for {allTrips.Count} trips...");
+
+            foreach (var trip in allTrips)
+            {
+                var guide = await TripGuideService.GetGuideByTripIdAsync(trip.Id);
+                Console.WriteLine($"Trip {trip.Id}: Guide found = {guide != null}");
+                if (guide != null)
+                {
+                    tripGuides[trip.Id] = guide;
+                    Console.WriteLine($"  - Guide: {guide.Name}, Agency: {guide.Agency}, Grant: {guide.GrantAmount}");
+                }
+            }
+
+            Console.WriteLine($"Total guides loaded: {tripGuides.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading guides: {ex.Message}");
+        }
+    }
+
+    // Guide Methods
+    // private async void OpenGuideModal(Trip trip)
+    // {
+    //     guideTrip = trip;
+    //     guideError = "";
+    //     await LoadGuideForTrip(trip.Id);
+    //     showGuideModal = true;
+    //     StateHasChanged();
+    // }
+
+    
+    private async Task OpenGuideModal(Trip trip)
+    {
+        Console.WriteLine("Button clicked!");
+        guideTrip = trip;
+        guideError = "";
+        await LoadGuideForTrip(trip.Id);
+        showGuideModal = true;
+        StateHasChanged();
+    }
+
+    private async Task LoadGuideForTrip(int tripId)
+    {
+        existingGuide = await TripGuideService.GetGuideByTripIdAsync(tripId);
+        if (existingGuide != null)
+        {
+            guideName = existingGuide.Name;
+            guideAgency = existingGuide.Agency;
+            guideGrantAmount = existingGuide.GrantAmount;
+        }
+        else
+        {
+            guideName = "";
+            guideAgency = "";
+            guideGrantAmount = 0;
+        }
+    }
+
+    private void CancelGuide()
+    {
+        if (!isSavingGuide)
+        {
+            showGuideModal = false;
+            guideTrip = null;
+            existingGuide = null;
+            guideError = "";
+        }
+    }
+
+    private async Task SaveGuide()
+    {
+        Console.WriteLine("=== SaveGuide called ===");
+
+        if (string.IsNullOrWhiteSpace(guideName))
+        {
+            guideError = "⚠️ الرجاء إدخال اسم المرشد";
+            ShowToast(false, "الرجاء إدخال اسم المرشد");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(guideName))
+        {
+            guideError = "⚠️ الرجاء إدخال اسم المرشد";
+            ShowToast(false, "الرجاء إدخال اسم المرشد");
+            return;
+        }
+
+        if (guideTrip == null)
+        {
+            guideError = "⚠️ لم يتم تحديد الرحلة";
+            ShowToast(false, "لم يتم تحديد الرحلة");
+            return;
+        }
+
+        try
+        {
+            isSavingGuide = true;
+            guideError = "";
+            StateHasChanged();
+
+            var guide = new TripGuide
+            {
+                TripId = guideTrip.Id,
+                Name = guideName.Trim(),
+                Agency = string.IsNullOrWhiteSpace(guideAgency) ? null : guideAgency.Trim(),
+                GrantAmount = guideGrantAmount
+            };
+
+            Console.WriteLine($"Attempting to save guide: TripId={guide.TripId}, Name='{guide.Name}', Agency='{guide.Agency}', Grant={guide.GrantAmount}");
+
+            // Check if service is available
+            if (TripGuideService == null)
+            {
+                Console.WriteLine("ERROR: TripGuideService is null!");
+                guideError = "خطأ: خدمة المرشدين غير متاحة";
+                ShowToast(false, "خدمة المرشدين غير متاحة");
+                return;
+            }
+
+            var result = await TripGuideService.CreateOrUpdateGuideAsync(guide);
+
+            if (result != null)
+            {
+                Console.WriteLine($"SUCCESS! Guide saved with ID: {result.Id}, Name: {result.Name}");
+
+                // Update local dictionary
+                tripGuides[guideTrip.Id] = result;
+
+                // Close modal
+                showGuideModal = false;
+                guideTrip = null;
+                existingGuide = null;
+
+                ShowToast(true, $"✅ تم حفظ المرشد '{guide.Name}' بنجاح");
+
+                // Refresh trips
+                await LoadTripsAsync();
+            }
+            else
+            {
+                Console.WriteLine("ERROR: CreateOrUpdateGuideAsync returned null");
+                guideError = "❌ فشل حفظ المرشد - لم يتم إرجاع بيانات";
+                ShowToast(false, "فشل حفظ المرشد");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                Console.WriteLine($"Inner Stack: {ex.InnerException.StackTrace}");
+            }
+
+            guideError = $"❌ خطأ: {ex.Message}";
+            ShowToast(false, $"خطأ في حفظ المرشد: {ex.Message}");
+        }
+        finally
+        {
+            isSavingGuide = false;
+            StateHasChanged();
+        }
+    }
+    private async Task DirectTestSave()
+    {
+        try
+        {
+            Console.WriteLine("=== Direct Test ===");
+
+            // Check if there are trips
+            if (!allTrips.Any())
+            {
+                Console.WriteLine("No trips available!");
+                ShowToast(false, "لا توجد رحلات متاحة للاختبار");
+                return;
+            }
+
+            // Get the first trip
+            var firstTrip = allTrips.First();
+
+            Console.WriteLine($"Using trip: ID={firstTrip.Id}, Number={firstTrip.TripNumber}");
+
+            // Create a test guide
+            var testGuide = new TripGuide
+            {
+                TripId = firstTrip.Id,
+                Name = "مرشد اختبار " + DateTime.Now.ToString("HH:mm:ss"),
+                Agency = "وكالة اختبار",
+                GrantAmount = 50000,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            Console.WriteLine($"Test guide: TripId={testGuide.TripId}, Name='{testGuide.Name}'");
+            Console.WriteLine($"TripGuideService is null: {TripGuideService == null}");
+
+            if (TripGuideService == null)
+            {
+                Console.WriteLine("ERROR: TripGuideService is null!");
+                ShowToast(false, "خدمة المرشدين غير متاحة");
+                return;
+            }
+
+            // Try to save using the service
+            var result = await TripGuideService.CreateOrUpdateGuideAsync(testGuide);
+
+            if (result != null)
+            {
+                Console.WriteLine($"✅ SUCCESS! Guide saved with ID: {result.Id}");
+
+                // Update local dictionary
+                tripGuides[firstTrip.Id] = result;
+
+                ShowToast(true, $"✅ نجح الاختبار! تم حفظ المرشد برقم: {result.Id}");
+
+                // Reload trips to refresh the UI
+                await LoadTripsAsync();
+            }
+            else
+            {
+                Console.WriteLine("❌ FAILED! Result is null");
+                ShowToast(false, "❌ فشل الاختبار - لم يتم حفظ البيانات");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Exception: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                Console.WriteLine($"Inner Stack: {ex.InnerException.StackTrace}");
+            }
+
+            ShowToast(false, $"❌ خطأ في الاختبار: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteGuide()
+    {
+        if (existingGuide == null || guideTrip == null) return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"هل أنت متأكد من حذف المرشد '{existingGuide.Name}' من هذه الرحلة؟");
+
+        if (!confirmed) return;
+
+        try
+        {
+            isSavingGuide = true;
+            StateHasChanged();
+
+            var success = await TripGuideService.DeleteGuideAsync(guideTrip.Id);
+
+            if (success)
+            {
+                tripGuides.Remove(guideTrip.Id);
+                ShowToast(true, "تم حذف المرشد بنجاح");
+                showGuideModal = false;
+                guideTrip = null;
+                existingGuide = null;
+                await LoadTripsAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                guideError = "فشل حذف المرشد";
+            }
+        }
+        catch (Exception ex)
+        {
+            guideError = $"حدث خطأ: {ex.Message}";
+            ShowToast(false, "حدث خطأ أثناء حذف المرشد");
+        }
+        finally
+        {
+            isSavingGuide = false;
+            StateHasChanged();
+        }
+    }
+
+    // Add JSRuntime for confirm dialog
+    // [Inject]
+    // protected IJSRuntime JSRuntime { get; set; }
+
+    private string testMessage = "لم يتم الضغط بعد";
+
+    private void TestButtonClick()
+    {
+        Console.WriteLine("✅✅✅ الزر يعمل! ✅✅✅");
+        testMessage = "✅ تم الضغط على الزر بنجاح في: " + DateTime.Now.ToString("HH:mm:ss");
+        ShowToast(true, "الزر يعمل!");
+        StateHasChanged();
+    }
+
+    private async Task TestGuideSaveButton()
+    {
+        Console.WriteLine("=== اختبار زر حفظ المرشد ===");
+        testMessage = "جاري الاختبار...";
+        StateHasChanged();
+
+        try
+        {
+            if (TripGuideService == null)
+            {
+                Console.WriteLine("❌ TripGuideService is NULL");
+                testMessage = "❌ خدمة المرشدين غير متاحة (TripGuideService is null)";
+                ShowToast(false, "خدمة المرشدين غير متاحة");
+                StateHasChanged();
+                return;
+            }
+
+            if (!allTrips.Any())
+            {
+                Console.WriteLine("❌ No trips available");
+                testMessage = "❌ لا توجد رحلات";
+                ShowToast(false, "لا توجد رحلات");
+                StateHasChanged();
+                return;
+            }
+
+            var trip = allTrips.First();
+            Console.WriteLine($"Testing with Trip ID: {trip.Id}, Number: {trip.TripNumber}");
+
+            var guide = new TripGuide
+            {
+                TripId = trip.Id,
+                Name = "مرشد اختبار " + DateTime.Now.ToString("HHmmss"),
+                Agency = "وكالة الاختبار",
+                GrantAmount = 50000
+            };
+
+            Console.WriteLine($"Calling CreateOrUpdateGuideAsync...");
+            var result = await TripGuideService.CreateOrUpdateGuideAsync(guide);
+
+            if (result != null)
+            {
+                Console.WriteLine($"✅ SUCCESS! Guide ID: {result.Id}");
+                testMessage = $"✅ تم حفظ المرشد بنجاح! ID: {result.Id}";
+                tripGuides[trip.Id] = result;
+                ShowToast(true, "تم حفظ المرشد بنجاح");
+            }
+            else
+            {
+                Console.WriteLine("❌ Result is NULL");
+                testMessage = "❌ فشل الحفظ - النتيجة فارغة";
+                ShowToast(false, "فشل الحفظ");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Exception: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
+            testMessage = $"❌ خطأ: {ex.Message}";
+            ShowToast(false, $"خطأ: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void TestOpenGuideModal(Trip trip)
+    {
+        Console.WriteLine($"TestOpenGuideModal called for Trip: {trip.Id}");
+        testMessage = $"تم فتح نافذة المرشد للرحلة: {trip.TripNumber}";
+        ShowToast(true, "تم استدعاء الدالة");
+        StateHasChanged();
+    }
+}
