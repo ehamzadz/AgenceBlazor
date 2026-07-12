@@ -221,6 +221,12 @@ namespace AgenceBlazor.Data
                     .HasColumnName("net_profit")
                     .HasComputedColumnSql("total_amount - commission", stored: true);
 
+                // ADD THESE NEW MAPPINGS
+                entity.Property(e => e.PaidAmount).HasColumnName("paid_amount");
+                entity.Property(e => e.RemainingAmount)
+                    .HasColumnName("remaining_amount")
+                    .HasComputedColumnSql("total_amount - commission - paid_amount", stored: true);
+
                 entity.Property(e => e.Status).HasColumnName("status");
 
                 entity.Property(e => e.CreatedAt)
@@ -236,7 +242,9 @@ namespace AgenceBlazor.Data
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc),
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
                     );
+                entity.Property(e => e.DirectPilgrimId).HasColumnName("direct_pilgrim_id");
             });
+
 
             modelBuilder.Entity<Payment>(entity =>
             {
@@ -245,6 +253,7 @@ namespace AgenceBlazor.Data
 
                 entity.Property(e => e.Id).HasColumnName("id");
                 entity.Property(e => e.AgencyId).HasColumnName("agency_id");
+                entity.Property(e => e.BookingId).HasColumnName("booking_id");  // ADD THIS
                 entity.Property(e => e.Amount).HasColumnName("amount");
                 entity.Property(e => e.PaymentMethod).HasColumnName("payment_method");
                 entity.Property(e => e.Notes).HasColumnName("notes");
@@ -270,6 +279,7 @@ namespace AgenceBlazor.Data
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
                     );
             });
+
             modelBuilder.Entity<HotelInfo>(entity =>
             {
                 entity.ToTable("hotels_info");

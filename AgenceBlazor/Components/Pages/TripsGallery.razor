@@ -11,6 +11,7 @@
 @* @inject TripGuideService TripGuideService *@
 @inject ITripGuideService TripGuideService
 @inject IJSRuntime JSRuntime
+@attribute [Authorize]
 
 <div class="trips-cards-container">
     <div class="cards-header">
@@ -2329,7 +2330,8 @@
                     TotalAmount = netAmount,        // Same as DirectPilgrim.TotalAmount
                     Commission = 0,
                     Reduction = directDiscount,       // Same as DirectPilgrim.Discount
-                    Status = "confirmed"
+                    Status = "confirmed",
+                    DirectPilgrimId = pilgrim.Id
                 };
 
                 await AgencyBookingService.CreateAsync(booking);

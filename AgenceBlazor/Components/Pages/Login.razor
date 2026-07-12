@@ -1,16 +1,19 @@
 ﻿@page "/login"
-@rendermode InteractiveServer
-@using System.ComponentModel.DataAnnotations
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
-@layout AgenceBlazor.Components.Layout.EmptyLayout
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="auth-page" dir="rtl">
     <div class="auth-container">
-        <!-- Brand Panel -->
-        <div class="auth-brand">
-            <div class="brand-overlay"></div>
-            <div class="brand-info">
-                <div class="brand-icon">
+        <!-- Visual Panel -->
+        <div class="auth-visual">
+            <div class="visual-pattern"></div>
+            <div class="visual-glow"></div>
+
+            <div class="visual-content">
+                <div class="visual-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M12 2L2 7l10 5 10-5-10-5z" />
                         <path d="M2 17l10 5 10-5" />
@@ -19,30 +22,42 @@
                 </div>
                 <h1>وكالة خضور</h1>
                 <p>للسياحة والعمرة</p>
-                <div class="brand-list">
-                    <div><span>✓</span> إدارة الرحلات</div>
-                    <div><span>✓</span> متابعة الوكالات</div>
-                    <div><span>✓</span> تقارير مالية</div>
+
+                <div class="visual-features">
+                    <div class="visual-feature">
+                        <span class="feature-dot"></span>
+                        <span>إدارة الرحلات والحجوزات</span>
+                    </div>
+                    <div class="visual-feature">
+                        <span class="feature-dot"></span>
+                        <span>متابعة الوكالات الشريكة</span>
+                    </div>
+                    <div class="visual-feature">
+                        <span class="feature-dot"></span>
+                        <span>تقارير مالية دقيقة</span>
+                    </div>
                 </div>
             </div>
+
+            <div class="visual-footer">لوحة تحكم إدارية</div>
         </div>
 
-        <!-- Login Panel -->
+        <!-- Form Panel -->
         <div class="auth-form">
             <div class="auth-form-wrap">
                 <div class="auth-form-top">
-                    <h2>تسجيل الدخول</h2>
+                    <h2>مرحباً بعودتك</h2>
                     <p>أدخل بياناتك للوصول إلى لوحة التحكم</p>
                 </div>
 
-                <EditForm Model="@model" OnValidSubmit="@HandleLogin">
-                    <DataAnnotationsValidator />
+                <form method="post" action="/Account/Login">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
 
                     @if (hasError)
                     {
                         <div class="auth-error">
-                            <span>⚠</span>
-                            <span>@errorText</span>
+                            <span class="auth-error-icon">⚠</span>
+                            <span>اسم المستخدم أو كلمة المرور غير صحيحة</span>
                         </div>
                     }
 
@@ -55,9 +70,8 @@
                                     <circle cx="12" cy="7" r="4" />
                                 </svg>
                             </span>
-                            <InputText @bind-Value="model.Username" placeholder="أدخل اسم المستخدم" autocomplete="username" />
+                            <input name="username" placeholder="أدخل اسم المستخدم" autocomplete="username" required />
                         </div>
-                        <ValidationMessage For="() => model.Username" />
                     </div>
 
                     <div class="auth-field">
@@ -69,7 +83,7 @@
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                                 </svg>
                             </span>
-                            <InputText type="@(showPassword ? "text" : "password")" @bind-Value="model.Password" placeholder="أدخل كلمة المرور" autocomplete="current-password" />
+                            <input type="@(showPassword ? "text" : "password")" name="password" placeholder="أدخل كلمة المرور" autocomplete="current-password" required minlength="6" />
                             <button type="button" class="auth-toggle-pass" @onclick="TogglePassword" tabindex="-1">
                                 @if (showPassword)
                                 {
@@ -87,75 +101,49 @@
                                 }
                             </button>
                         </div>
-                        <ValidationMessage For="() => model.Password" />
                     </div>
 
                     <div class="auth-field-options">
                         <label class="auth-remember">
-                            <input type="checkbox" @bind="remember" />
+                            <input type="checkbox" name="remember" />
                             <span>تذكرني</span>
                         </label>
                         <a href="#" class="auth-forgot">نسيت كلمة المرور؟</a>
                     </div>
 
-                    <button type="submit" class="auth-submit-btn" disabled="@loading">
-                        @if (loading)
-                        {
-                            <span class="auth-spinner"></span>
-                            <span>جاري الدخول...</span>
-                        }
-                        else
-                        {
-                            <span>دخول</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                                <polyline points="10 17 15 12 10 7" />
-                                <line x1="15" y1="12" x2="3" y2="12" />
-                            </svg>
-                        }
+                    <button type="submit" class="auth-submit-btn">
+                        <span>دخول</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                            <polyline points="10 17 15 12 10 7" />
+                            <line x1="15" y1="12" x2="3" y2="12" />
+                        </svg>
                     </button>
-                </EditForm>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    private LoginModel model = new();
-    private bool loading = false;
-    private bool remember = false;
-    private bool hasError = false;
     private bool showPassword = false;
-    private string errorText = "";
+    private bool hasError = false;
+    private string returnUrl = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        hasError = query["error"] == "1";
+        returnUrl = query["returnUrl"] ?? "";
+
+        // CRITICAL FIX: Check authentication state and redirect if already logged in
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/TripsGallery", true);
+        }
+    }
 
     private void TogglePassword() => showPassword = !showPassword;
-
-    private async Task HandleLogin()
-    {
-        hasError = false;
-
-        if (model.Username == "admin" && model.Password == "admin123")
-        {
-            loading = true;
-            await Task.Delay(500);
-            Navigation.NavigateTo("/TripsGallery");
-        }
-        else
-        {
-            hasError = true;
-            errorText = "اسم المستخدم أو كلمة المرور غير صحيحة";
-        }
-    }
-
-    private class LoginModel
-    {
-        [Required(ErrorMessage = "اسم المستخدم مطلوب")]
-        public string Username { get; set; } = "";
-
-        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
-        [MinLength(6, ErrorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل")]
-        public string Password { get; set; } = "";
-    }
-
-    
 }

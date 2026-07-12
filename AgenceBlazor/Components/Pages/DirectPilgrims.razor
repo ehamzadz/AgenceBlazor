@@ -7,6 +7,7 @@
 @inject TripService TripService
 @inject AgencyService AgencyService
 @inject PaymentService PaymentService
+@inject AgencyBookingService AgencyBookingService
 
 <div class="pilgrims-container">
     <!-- Header -->
@@ -378,7 +379,8 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="ClosePaymentModal" disabled="@isSavingPayment">إلغاء</button>
-                <button class="btn-save" @onclick="SavePayment" disabled="@isSavingPayment || paymentAmount <= 0 || paymentAmount > paymentPilgrim.RemainingAmount">
+                <button class="btn-save" @onclick="SavePayment"
+                        disabled="@(isSavingPayment || paymentAmount <= 0 || paymentAmount > paymentPilgrim.RemainingAmount)">
                     @if (isSavingPayment)
                     {
                         <span>جاري الحفظ...</span>
@@ -453,7 +455,7 @@
     private List<DirectPilgrim> filteredPilgrims = new();
     private List<Trip> trips = new();
     private bool isLoading = true;
-    private string viewMode = "cards";
+    private string viewMode = "table";
     private bool showDetailsModal = false;
     private DirectPilgrim? selectedPilgrim = null;
 
@@ -562,7 +564,7 @@
     private void OpenPaymentModal(DirectPilgrim pilgrim)
     {
         paymentPilgrim = pilgrim;
-        paymentAmount = pilgrim.NetAmount; // Default to full amount
+        paymentAmount = pilgrim.RemainingAmount; // Default to full amount
         paymentMethod = "نقداً";
         paymentNotes = "";
         showPaymentModal = true;
@@ -577,6 +579,53 @@
         }
     }
 
+    // private async Task SavePayment()
+    // {
+    //     if (paymentPilgrim == null || paymentAmount <= 0) return;
+
+    //     try
+    //     {
+    //         isSavingPayment = true;
+    //         StateHasChanged();
+
+    //         Update pilgrim payment
+    //         await DirectPilgrimService.AddPaymentAsync(paymentPilgrim.Id, paymentAmount);
+
+    //         If local agency exists, also register payment there
+    //         if (localAgency != null)
+    //         {
+    //             var payment = new Payment
+    //             {
+    //                 AgencyId = localAgency.AgencyId,
+    //                 Amount = paymentAmount,
+    //                 PaymentMethod = paymentMethod,
+    //                 PaymentDate = DateTime.UtcNow,
+    //                 Notes = paymentNotes ?? $"تسديد معتمر: {paymentPilgrim.MainPilgrimName}",
+    //                 CreatedAt = DateTime.UtcNow,
+    //                 UpdatedAt = DateTime.UtcNow
+    //             };
+
+    //             await PaymentService.CreateAsync(payment);
+    //             await AgencyService.AddPaymentAsync(localAgency.AgencyId, paymentAmount);
+    //         }
+
+    //         showPaymentModal = false;
+    //         paymentPilgrim = null;
+    //         await LoadLocalAgency();
+    //         await LoadData();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Payment error: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isSavingPayment = false;
+    //         StateHasChanged();
+    //     }
+    // }
+    @inject AgencyBookingService AgencyBookingService  // Add this at the top
+
     private async Task SavePayment()
     {
         if (paymentPilgrim == null || paymentAmount <= 0) return;
@@ -586,25 +635,28 @@
             isSavingPayment = true;
             StateHasChanged();
 
-            // Update pilgrim payment
-            await DirectPilgrimService.AddPaymentAsync(paymentPilgrim.Id, paymentAmount);
-
-            // If local agency exists, also register payment there
             if (localAgency != null)
             {
-                var payment = new Payment
-                {
-                    AgencyId = localAgency.AgencyId,
-                    Amount = paymentAmount,
-                    PaymentMethod = paymentMethod,
-                    PaymentDate = DateTime.UtcNow,
-                    Notes = paymentNotes ?? $"تسديد معتمر: {paymentPilgrim.MainPilgrimName}",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
+                var allBookings = await AgencyBookingService.GetAllAsync();
+                var matchingBooking = allBookings.FirstOrDefault(b => b.DirectPilgrimId == paymentPilgrim.Id);
 
-                await PaymentService.CreateAsync(payment);
-                await AgencyService.AddPaymentAsync(localAgency.AgencyId, paymentAmount);
+                if (matchingBooking != null)
+                {
+                    var payment = new Payment
+                    {
+                        AgencyId = localAgency.AgencyId,
+                        BookingId = matchingBooking.Id,
+                        Amount = paymentAmount,
+                        PaymentMethod = paymentMethod,
+                        PaymentDate = DateTime.UtcNow,
+                        Notes = paymentNotes ?? $"تسديد معتمر: {paymentPilgrim.MainPilgrimName}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await PaymentService.CreateAsync(payment);
+                    // Trigger handles: agencies.paidamount, agency_bookings.paid_amount, direct_pilgrims.paid_amount
+                }
             }
 
             showPaymentModal = false;

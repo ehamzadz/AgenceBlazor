@@ -7,6 +7,8 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject TreasuryService TreasuryService
+@inject DirectPilgrimService DirectPilgrimService
+@inject TripService TripService
 
 <div class="agencies-container">
     <div class="page-header">
@@ -280,7 +282,7 @@
 }
 
 <!-- Payment Modal -->
-@if (showPaymentModal && paymentAgency != null)
+@* @if (showPaymentModal && paymentAgency != null)
 {
     <div class="pmt-overlay" @onclick="CancelPayment">
         <div class="pmt-card" @onclick:stopPropagation="true">
@@ -393,37 +395,206 @@
             </div>
         </div>
     </div>
+} *@
+
+
+<!-- Payment Modal with Booking Selection -->
+@if (showPaymentModal && paymentAgency != null)
+{
+    <div class="pmt-overlay" @onclick="CancelPayment">
+        <div class="pmt-card pmt-wide" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="pmt-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 0.5rem; border-radius: 10px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="pmt-title" style="color:white;">تسديد دفعة - @paymentAgency.AgencyName</h3>
+                </div>
+                <button class="pmt-close" @onclick="CancelPayment" disabled="@isSavingPayment">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div class="pmt-body">
+                <!-- Agency Summary -->
+                <div class="pmt-agency-summary">
+                    <div class="pmt-summary-item">
+                        <span>إجمالي الديون</span>
+                        <span class="debt">@agencyBookingsForPayment.Sum(b => b.NetProfit).ToString("N0") دج</span>
+                    </div>
+                    <div class="pmt-summary-item">
+                        <span>إجمالي المدفوع</span>
+                        <span class="paid">@agencyBookingsForPayment.Sum(b => b.PaidAmount).ToString("N0") دج</span>
+                    </div>
+                    <div class="pmt-summary-item">
+                        <span>المتبقي</span>
+                        <span class="remaining">@agencyBookingsForPayment.Sum(b => b.RemainingAmount).ToString("N0") دج</span>
+                    </div>
+                </div>
+
+                <!-- Bookings Table -->
+                @if (agencyBookingsForPayment.Any())
+                {
+                    <div class="pmt-bookings-table-wrapper">
+                        <table class="pmt-bookings-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;">تحديد</th>
+                                    <th>الرحلة</th>
+                                    <th>الفندق</th>
+                                    <th>المعتمر</th>
+                                    <th>المعتمرين</th>
+                                    <th>المستحق</th>
+                                    <th>المدفوع</th>
+                                    <th>المتبقي</th>
+                                    <th style="width:130px;">مبلغ الدفع</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var booking in agencyBookingsForPayment)
+                                {
+                                    <tr class="@(selectedBookingIds.Contains(booking.Id) ? "selected-row" : "")">
+                                        <td>
+                                            <input type="checkbox" 
+                                                   checked="@selectedBookingIds.Contains(booking.Id)"
+                                                   @onchange="() => ToggleBookingSelection(booking.Id)" />
+                                        </td>
+                                        <td>
+                                            <span class="booking-trip-number">@booking.Trip?.TripNumber</span>
+                                            <span class="booking-trip-date">@booking.Trip?.DepartureDate.ToString("dd/MM/yyyy")</span>
+                                        </td>
+                                        <td>@booking.HotelName</td>
+                                        <td>
+                                            @if (booking.AgencyName == "الوكالة المحلية")
+                                            {
+                                                <span class="pilgrim-name-badge">@GetDirectPilgrimName(booking)</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="color:#94a3b8;">-</span>
+                                            }
+                                        </td>
+                                        <td>@booking.TotalPilgrims</td>
+                                        <td class="cell-amount">@booking.NetProfit.ToString("N0")</td>
+                                        <td class="cell-amount" style="color:#1565c0;">@booking.PaidAmount.ToString("N0")</td>
+                                        <td class="cell-amount" style="color:@(booking.RemainingAmount > 0 ? "#dc2626" : "#2e7d32");">@booking.RemainingAmount.ToString("N0")</td>
+                                        <td>
+                                            @if (selectedBookingIds.Contains(booking.Id))
+                                            {
+                                                <input type="number" 
+                                                       class="pmt-booking-amount-input"
+                                                       value="@GetBookingPaymentAmount(booking.Id)"
+                                                       @oninput="(e) => UpdateBookingPaymentAmount(booking.Id, e)"
+                                                       step="1000" min="0" max="@booking.RemainingAmount"
+                                                       placeholder="المبلغ" />
+                                            }
+                                            else
+                                            {
+                                                <span class="not-selected">-</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="pmt-no-bookings">لا توجد حجوزات مستحقة لهذه الوكالة</div>
+                }
+
+                <!-- Payment Summary -->
+                @{
+                    var totalSelectedPayment = bookingPaymentAmounts.Values.Sum();
+                }
+                <div class="pmt-payment-summary">
+                    <div class="pmt-summary-item">
+                        <span>إجمالي المبلغ المحدد للدفع</span>
+                        <span class="total-pay">@totalSelectedPayment.ToString("N0") دج</span>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(paymentError))
+                {
+                    <div class="pmt-error">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <span>@paymentError</span>
+                    </div>
+                }
+
+                <!-- Payment Method -->
+                <div class="pmt-field">
+                    <label class="pmt-label">طريقة الدفع</label>
+                    <div class="pmt-btns">
+                        @foreach (var method in new[] { "نقداً", "شيك", "تحويل بنكي", "بريد" })
+                        {
+                            <button class="pmt-btn @(selectedPaymentMethod == method ? "active" : "")"
+                                    @onclick="() => selectedPaymentMethod = method">
+                                @method
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="pmt-field">
+                    <label class="pmt-label">ملاحظات</label>
+                    <input type="text" class="pmt-input" @bind="paymentNotes" placeholder="ملاحظات (اختياري)" />
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pmt-footer">
+                <button class="pmt-btn-cancel" @onclick="CancelPayment" disabled="@isSavingPayment">
+                    ✕ إلغاء
+                </button>
+                <button class="pmt-btn-save" @onclick="SavePaymentWithBookings"
+                        disabled="@(isSavingPayment || totalSelectedPayment <= 0 || !string.IsNullOrEmpty(paymentError))">
+                    @if (isSavingPayment)
+                    {
+                        <span class="pmt-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 تأكيد الدفع (@totalSelectedPayment.ToString("N0") دج)</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
 }
 
-
 @code {
-    private List<Agency> agencies = new List<Agency>();
+    private List<Agency> agencies = new();
     private bool isLoading = true;
+    private Dictionary<Guid, decimal> agencyReductions = new();
+
+    // Payment Modal
+    private bool showPaymentModal = false;
+    private Agency paymentAgency = null;
+    private bool isSavingPayment = false;
+    private string selectedPaymentMethod = "نقداً";
+    private string paymentNotes = "";
+    private List<AgencyBooking> agencyBookingsForPayment = new();
+    private HashSet<int> selectedBookingIds = new();
+    private Dictionary<int, decimal> bookingPaymentAmounts = new();
+
+    // Inject AgencyBookingService
+    @inject AgencyBookingService AgencyBookingService
 
     protected override async Task OnInitializedAsync()
     {
         await LoadAgenciesAsync();
     }
-
-    // private async Task LoadAgenciesAsync()
-    // {
-    //     try
-    //     {
-    //         isLoading = true;
-    //         agencies = await AgencyService.GetAllAgenciesAdminAsync();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"Error loading agencies: {ex.Message}");
-    //     }
-    //     finally
-    //     {
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-    private Dictionary<Guid, decimal> agencyReductions = new();
 
     private async Task LoadAgenciesAsync()
     {
@@ -444,175 +615,197 @@
         }
     }
 
-    private void ShowAgencyDetails(Agency agency)
-    {
-        // TODO: Navigate to agency details page or show modal
-        Console.WriteLine($"Show details for: {agency.AgencyName}");
-    }
-
-    private void ViewBookings(Agency agency)
-    {
-        // TODO: Navigate to bookings page filtered by this agency
-        Console.WriteLine($"View bookings for agency: {agency.AgencyName}");
-    }
-
-    private void EditAgency(Agency agency)
-    {
-        // TODO: Open edit modal
-        Console.WriteLine($"Edit agency: {agency.AgencyName}");
-    }
-
-    // Payment Modal
-    private bool showPaymentModal = false;
-    private Agency paymentAgency = null;
-    private bool isSavingPayment = false;
-    private string selectedPaymentMethod = "نقداً";
-    private string paymentNotes = "";
-    private decimal paymentAmount = 10000; // Default value instead of 0
-
-    private void AddPayment(Agency agency)
+    private async Task AddPayment(Agency agency)
     {
         paymentAgency = agency;
-        paymentAmount = agency.RemainingAmount; // Default to full remaining
         selectedPaymentMethod = "نقداً";
         paymentNotes = "";
+        selectedBookingIds = new();
+        bookingPaymentAmounts = new();
+
+        // Load agency bookings with remaining debt
+        await LoadAgencyBookingsForPayment(agency.AgencyId);
+
         showPaymentModal = true;
+        StateHasChanged();
     }
 
-    private void CancelPayment()
+    private async Task LoadAgencyBookingsForPayment(Guid agencyId)
     {
-        if (!isSavingPayment)
+        try
         {
-            showPaymentModal = false;
-            paymentAgency = null;
+            var allBookings = await AgencyBookingService.GetAllAsync();
+            agencyBookingsForPayment = allBookings
+                .Where(b => b.AgencyId == agencyId && b.RemainingAmount > 0)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToList();
+
+            await LoadPilgrimNamesForLocalAgency();  // ADD THIS
+            StateHasChanged();
+        }
+        catch
+        {
+            agencyBookingsForPayment = new();
         }
     }
-    
-    // Toast notification
-    private bool showToast = false;
-    private bool toastSuccess = false;
-    private string toastMessage = "";
 
-    private void ShowToast(bool success, string message)
+    private void ToggleBookingSelection(int bookingId)
     {
-        toastSuccess = success; toastMessage = message; showToast = true;
-        _ = Task.Run(async () => { await Task.Delay(3000); showToast = false; await InvokeAsync(StateHasChanged); });
+        if (selectedBookingIds.Contains(bookingId))
+        {
+            selectedBookingIds.Remove(bookingId);
+            bookingPaymentAmounts.Remove(bookingId);
+        }
+        else
+        {
+            selectedBookingIds.Add(bookingId);
+            // Default to remaining amount
+            var booking = agencyBookingsForPayment.FirstOrDefault(b => b.Id == bookingId);
+            if (booking != null)
+            {
+                bookingPaymentAmounts[bookingId] = booking.RemainingAmount;
+            }
+        }
+        StateHasChanged();
     }
 
-
-    // private async Task SavePayment()
-    // {
-    //     if (paymentAmount <= 0 || paymentAgency == null) return;
-
-    //     try
-    //     {
-    //         isSavingPayment = true;
-    //         StateHasChanged();
-
-    //         var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
-
-    //         if (success)
-    //         {
-    //             var payment = new Payment
-    //             {
-    //                 AgencyId = paymentAgency.AgencyId,
-    //                 Amount = paymentAmount,
-    //                 PaymentMethod = selectedPaymentMethod,
-    //                 PaymentDate = DateTime.Now,
-    //                 Notes = paymentNotes
-    //             };
-    //             await PaymentService.CreateAsync(payment);
-
-    //             showPaymentModal = false;
-    //             await LoadAgenciesAsync();
-
-    //             Store receipt data in session storage and open new tab
-    //             var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
-
-    //             var receiptData = new
-    //             {
-    //                 ReceiptNumber = $"REC-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}",
-    //                 ReceiptDate = DateTime.Now.ToString("dd/MM/yyyy"),
-    //                 ReceiptTime = DateTime.Now.ToString("HH:mm"),
-    //                 AgencyName = updatedAgency.AgencyName,
-    //                 AgencyCity = updatedAgency.City ?? "",
-    //                 AgencyPhone = updatedAgency.Phone ?? "",
-    //                 Amount = paymentAmount,
-    //                 Method = selectedPaymentMethod,
-    //                 DebtAmount = updatedAgency.DebtAmount,
-    //                 PaidAmount = updatedAgency.PaidAmount,
-    //                 RemainingAmount = updatedAgency.RemainingAmount,
-    //                 Notes = paymentNotes ?? ""
-    //             };
-
-    //             var json = System.Text.Json.JsonSerializer.Serialize(receiptData);
-    //             await JS.InvokeVoidAsync("sessionStorage.setItem", "receiptData", json);
-    //             await JS.InvokeVoidAsync("open", "/payment-receipt", "_blank");
-    //         }
-    //         else
-    //         {
-    //             ShowToast(false, "فشل عملية التسديد");
-    //         }
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         ShowToast(false, "حدث خطأ أثناء التسديد");
-    //     }
-    //     finally
-    //     {
-    //         isSavingPayment = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-
-
-
-
-    private async Task SavePayment()
-{
-    if (paymentAgency == null) return;
-
-    try
+    private decimal GetBookingPaymentAmount(int bookingId)
     {
-        isSavingPayment = true;
-        StateHasChanged();
+        return bookingPaymentAmounts.ContainsKey(bookingId) ? bookingPaymentAmounts[bookingId] : 0;
+    }
 
-        var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
-
-        if (success)
+    private void UpdateBookingPaymentAmount(int bookingId, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var amount))
         {
-            // Save payment record
-            var payment = new Payment
+            var booking = agencyBookingsForPayment.FirstOrDefault(b => b.Id == bookingId);
+            if (booking == null) return;
+
+            // Get total of OTHER selected bookings
+            var otherBookingsTotal = selectedBookingIds
+                .Where(id => id != bookingId)
+                .Sum(id => bookingPaymentAmounts.GetValueOrDefault(id, 0));
+
+            // Max this booking can take
+            var maxForThisBooking = booking.RemainingAmount;
+
+            // Validate
+            if (amount < 0) amount = 0;
+
+            // Don't enforce single booking minimum here, validate on save
+            if (amount > maxForThisBooking)
             {
-                AgencyId = paymentAgency.AgencyId,
-                Amount = paymentAmount,
-                PaymentMethod = selectedPaymentMethod,
-                PaymentDate = DateTime.Now,
-                Notes = paymentNotes
-            };
-            await PaymentService.CreateAsync(payment);
+                amount = maxForThisBooking;
+            }
+
+            bookingPaymentAmounts[bookingId] = amount;
+            paymentError = ""; // Clear error when user changes amount
+        }
+        StateHasChanged();
+    }
+
+    private string paymentError = "";
+
+    private string ValidatePaymentAmounts()
+    {
+        var totalSelected = bookingPaymentAmounts.Values.Sum();
+
+        if (totalSelected <= 0)
+            return "يجب إدخال مبلغ الدفع";
+
+        if (selectedBookingIds.Count == 1)
+        {
+            // Single booking: any amount from 1 to RemainingAmount
+            var bookingId = selectedBookingIds.First();
+            var booking = agencyBookingsForPayment.First(b => b.Id == bookingId);
+            var amount = bookingPaymentAmounts.GetValueOrDefault(bookingId, 0);
+
+            if (amount <= 0)
+                return "يجب أن يكون المبلغ أكبر من 0";
+
+            if (amount > booking.RemainingAmount)
+                return $"المبلغ يتجاوز المبلغ المتبقي للحجز ({booking.RemainingAmount:N0} دج)";
+        }
+        else if (selectedBookingIds.Count > 1)
+        {
+            // Multiple bookings: total must be >= max single remaining AND <= sum of all remaining
+            var maxSingleRemaining = selectedBookingIds.Max(id =>
+                agencyBookingsForPayment.First(b => b.Id == id).RemainingAmount);
+
+            var totalRemaining = selectedBookingIds.Sum(id =>
+                        agencyBookingsForPayment.First(b => b.Id == id).RemainingAmount);
+
+            if (totalSelected < 1)
+                return "يجب أن يكون إجمالي المبلغ أكبر من 0";
+
+            if (totalSelected > totalRemaining)
+                return $"إجمالي المبلغ ({totalSelected:N0} دج) يتجاوز مجموع المبالغ المتبقية ({totalRemaining:N0} دج)";
+        }
+
+        return ""; // No error
+    }
+
+    private async Task SavePaymentWithBookings()
+    {
+        if (paymentAgency == null || !selectedBookingIds.Any()) return;
+
+        // Validate
+        var error = ValidatePaymentAmounts();
+        if (!string.IsNullOrEmpty(error))
+        {
+            paymentError = error;
+            ShowToast(false, error);
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            isSavingPayment = true;
+            paymentError = "";
+            StateHasChanged();
+
+            var totalAmount = bookingPaymentAmounts.Values.Sum();
+
+            // Update agency paid amount
+            await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, totalAmount);
+
+            // Create payments for each selected booking
+            foreach (var bookingId in selectedBookingIds)
+            {
+                var amount = bookingPaymentAmounts.GetValueOrDefault(bookingId, 0);
+                if (amount <= 0) continue;
+
+                var payment = new Payment
+                {
+                    AgencyId = paymentAgency.AgencyId,
+                    BookingId = bookingId,
+                    Amount = amount,
+                    PaymentMethod = selectedPaymentMethod,
+                    PaymentDate = DateTime.UtcNow,
+                    Notes = paymentNotes
+                };
+                await PaymentService.CreateAsync(payment);
+            }
 
             // Route payment based on method
             if (selectedPaymentMethod == "نقداً")
             {
-                // Cash goes to MAIN treasury
                 await TreasuryService.AddAgencyPaymentToTreasuryAsync(
-                    paymentAgency.AgencyId, 
-                    paymentAgency.AgencyName, 
-                    paymentAmount, 
-                    selectedPaymentMethod, 
+                    paymentAgency.AgencyId,
+                    paymentAgency.AgencyName,
+                    totalAmount,
+                    selectedPaymentMethod,
                     paymentNotes
                 );
             }
             else
             {
-                // Bank transfer, cheque, بريد go to OWNER bank account
                 var ownerTransaction = new OwnerTreasuryTransaction
                 {
                     Type = "deposit",
                     Source = "bank",
-                    Amount = paymentAmount,
+                    Amount = totalAmount,
                     Description = $"دفعة من وكالة {paymentAgency.AgencyName} - {selectedPaymentMethod}",
                     TransactionDate = DateTime.UtcNow,
                     Notes = paymentNotes,
@@ -623,175 +816,151 @@
             }
 
             showPaymentModal = false;
+            paymentAgency = null;
+            agencyBookingsForPayment = new();
+            selectedBookingIds = new();
+            bookingPaymentAmounts = new();
+            paymentError = "";
             await LoadAgenciesAsync();
-            
-            var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
-            await PrintReceiptDirectly(updatedAgency);
+            ShowToast(true, "تم التسديد بنجاح");
         }
-        else
+        catch (Exception ex)
         {
-            ShowToast(false, "فشل عملية التسديد");
+            ShowToast(false, "حدث خطأ أثناء التسديد");
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSavingPayment = false;
+            StateHasChanged();
         }
     }
-    catch (Exception ex)
+
+    
+    private void CancelPayment()
     {
-        ShowToast(false, "حدث خطأ أثناء التسديد");
+        if (!isSavingPayment)
+        {
+            showPaymentModal = false;
+            paymentAgency = null;
+            agencyBookingsForPayment = new();
+            selectedBookingIds = new();
+            bookingPaymentAmounts = new();
+        }
     }
-    finally
+
+    private Dictionary<int, string> pilgrimNamesCache = new();
+
+    private string GetPilgrimName(int bookingId)
     {
-        isSavingPayment = false;
-        StateHasChanged();
+        return pilgrimNamesCache.ContainsKey(bookingId) ? pilgrimNamesCache[bookingId] : "...";
     }
-}
-//     private async Task SavePayment()
-// {
-//     if (paymentAgency == null) return; paymentAmount <= 0 || 
 
-//     try
-//     {
-//         isSavingPayment = true;
-//         StateHasChanged();
+    private string GetDirectPilgrimName(AgencyBooking booking)
+    {
+        if (pilgrimNamesCache.ContainsKey(booking.Id))
+            return pilgrimNamesCache[booking.Id];
+        return $"حجز #{booking.Id}";
+    }
 
-//         var success = await AgencyService.AddPaymentAsync(paymentAgency.AgencyId, paymentAmount);
+    // private async Task LoadPilgrimNamesForLocalAgency()
+    // {
+    //     pilgrimNamesCache = new();
+    //     var localBookings = agencyBookingsForPayment.Where(b => b.AgencyName == "الوكالة المحلية").ToList();
 
-//         if (success)
-//         {
-//             var payment = new Payment
-//             {
-//                 AgencyId = paymentAgency.AgencyId,
-//                 Amount = paymentAmount,
-//                 PaymentMethod = selectedPaymentMethod,
-//                 PaymentDate = DateTime.Now,
-//                 Notes = paymentNotes
-//             };
-//             await PaymentService.CreateAsync(payment);
+    //     if (!localBookings.Any()) return;
 
-//             showPaymentModal = false;
-//             await LoadAgenciesAsync();
-            
-//             Print receipt directly
-//             var updatedAgency = agencies.FirstOrDefault(a => a.AgencyId == paymentAgency.AgencyId) ?? paymentAgency;
-//             await PrintReceiptDirectly(updatedAgency);
-//         }
-//         else
-//         {
-//             ShowToast(false, "فشل عملية التسديد");
-//         }
-//     }
-//     catch (Exception ex)
-//     {
-//         ShowToast(false, "حدث خطأ أثناء التسديد");
-//     }
-//     finally
-//     {
-//         isSavingPayment = false;
-//         StateHasChanged();
-//     }
-// }
-private async Task PrintReceiptDirectly(Agency agency)
-{
-    var receiptNumber = $"REC-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
-    var receiptDate = DateTime.Now.ToString("dd/MM/yyyy");
-    
-    var html = $@"<!DOCTYPE html>
-<html lang='ar' dir='rtl'>
-<head><meta charset='UTF-8'><title>إيصال دفع</title>
-<style>
-    @@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800&display=swap');
-    *{{margin:0;padding:0;box-sizing:border-box}}
-    body{{display:flex;justify-content:center;padding:0;background:#fff;font-family:'Tajawal','Cairo',sans-serif}}
-    .ticket{{width:80mm;background:#fff;padding:4mm 3mm;line-height:1.3;font-size:8px}}
-    .center{{text-align:center}}
-    .bold{{font-weight:700}}
-    .hr{{border:none;border-top:1px solid #000;margin:2mm 0}}
-    .hr-dot{{border:none;border-top:1px dotted #999;margin:1.5mm 0}}
-    
-    .header-logo{{font-size:14px;font-weight:900;letter-spacing:3px}}
-    .header-name{{font-size:9px;font-weight:700;margin:0.5mm 0}}
-    .header-sub{{font-size:6px;color:#555}}
-    
-    .title{{font-size:10px;font-weight:800;letter-spacing:1px}}
-    .title-sub{{font-size:6px;color:#666;margin:0.3mm 0}}
-    
-    .info-row{{display:flex;justify-content:space-between;font-size:8px;margin:0.3mm 0}}
-    .info-row span:first-child{{color:#555}}
-    .info-row .val{{font-weight:700}}
-    
-    .amount-box{{text-align:center;margin:2mm 0}}
-    .amount-label{{font-size:7px;color:#888;letter-spacing:1px}}
-    .amount-value{{font-size:20px;font-weight:900;font-family:'Cairo',monospace}}
-    .amount-currency{{font-size:8px;color:#555}}
-    
-    .method-box{{text-align:center;margin:1mm 0}}
-    .method-text{{font-size:8px;color:#444}}
-    
-    .stamp-area{{display:flex;justify-content:space-between;align-items:flex-end;gap:3mm;margin:4mm 0 2mm 0}}
-    .stamp-box{{text-align:center}}
-    .stamp-box-inner{{width:26mm;height:15mm;border:1px dashed #999;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:7px;margin-bottom:0.5mm}}
-    .stamp-box-inner::after{{content:'ختم الوكالة'}}
-    .sig-box{{flex:1}}
-    .sig-line{{border-top:0.5px solid #999;margin-bottom:0.3mm}}
-    .sig-text{{font-size:6px;color:#888}}
-    
-    .footer-thanks{{font-size:8px;font-weight:600;margin-bottom:0.3mm}}
-    .footer-info{{font-size:6px;color:#888}}
-    
-    @@page{{size:80mm auto;margin:0}}
-    @@media print{{body{{background:#fff}}.ticket{{box-shadow:none}}}}
-</style></head>
-<body>
-<div class='ticket'>
-    <div class='center header-logo'>خضور</div>
-    <div class='center header-name'>وكالة خضور للسياحة والعمرة</div>
-    <div class='center header-sub'>KHODOR TRAVEL & UMRAH</div>
-    
-    <hr class='hr'>
-    
-    <div class='center title'>إيصال دفع</div>
-    <div class='center title-sub'>{receiptNumber} | {receiptDate}</div>
-    
-    <hr class='hr-dot'>
-    
-    <div class='info-row'><span>الوكالة</span><span class='val'>{agency.AgencyName}</span></div>
-    <div class='info-row'><span>المدينة</span><span class='val'>{agency.City}</span></div>
-    <div class='info-row'><span>الهاتف</span><span class='val'>{agency.Phone ?? "031 12 34 56"}</span></div>
-    
-    <hr class='hr'>
-    
-    <div class='amount-box'>
-        <div class='amount-label'>المبلغ المدفوع</div>
-        <div class='amount-value'>{paymentAmount.ToString("N0")}</div>
-        <div class='amount-currency'>دينار جزائري</div>
-    </div>
-    
-    <div class='method-box'>
-        <span>طريقة الدفع: </span><span class='bold'>{selectedPaymentMethod}</span>
-    </div>
-    
-    {(string.IsNullOrEmpty(paymentNotes) ? "" : $"<div class='center' style='font-size:7px;color:#666;margin:1mm 0'>{paymentNotes}</div>")}
-    
-    <hr class='hr'>
-    
-    <div class='stamp-area'>
-        <div class='stamp-box'>
-            <div class='stamp-box-inner'></div>
-        </div>
-        <div class='sig-box'>
-            <div class='sig-line'></div>
-            <div class='sig-text'>توقيع المستلم</div>
-        </div>
-    </div>
-    
-    <hr class='hr'>
-    
-    <div class='center footer-thanks'>شكراً لتعاملكم معنا</div>
-    <div class='center footer-info'>س.ت: 123456789 | ض.م: 987654321</div>
-    <div class='center footer-info'>031 12 34 56 | شارع العربي بن مهيدي، قسنطينة</div>
-</div>
-<script>window.print();window.close();</script>
-</body></html>";
+    //     try
+    //     {
+    //         var tripIds = localBookings.Select(b => b.TripId).Distinct();
 
-    await JS.InvokeVoidAsync("printReceipt", html);
-}
+    //         foreach (var tripId in tripIds)
+    //         {
+    //             var pilgrims = await DirectPilgrimService.GetByTripIdAsync(tripId);
+    //             var tripBookings = localBookings.Where(b => b.TripId == tripId);
+
+    //             Track pilgrims already assigned to a booking so they can't be reused
+    //             var usedPilgrimIds = new HashSet<int>();
+
+    //             foreach (var booking in tripBookings)
+    //             {
+    //                 Strict match: hotel + pilgrims count + amount, excluding already-used pilgrims
+    //                 var match = pilgrims.FirstOrDefault(p =>
+    //                     !usedPilgrimIds.Contains(p.Id) &&
+    //                     p.HotelName == booking.HotelName &&
+    //                     p.TotalPilgrims == booking.TotalPilgrims &&
+    //                     Math.Abs(p.TotalAmount - booking.TotalAmount) < 5);
+
+    //                 if (match == null)
+    //                 {
+    //                     Fallback: hotel + pilgrims count only, still excluding used pilgrims
+    //                     match = pilgrims.FirstOrDefault(p =>
+    //                         !usedPilgrimIds.Contains(p.Id) &&
+    //                         p.HotelName == booking.HotelName &&
+    //                         p.TotalPilgrims == booking.TotalPilgrims);
+    //                 }
+
+    //                 if (match != null)
+    //                 {
+    //                     usedPilgrimIds.Add(match.Id);
+    //                     pilgrimNamesCache[booking.Id] = match.MainPilgrimName;
+    //                 }
+    //                 else
+    //                 {
+    //                     pilgrimNamesCache[booking.Id] = $"معتمر {booking.Id}";
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Error loading pilgrim names: {ex.Message}");
+    //         foreach (var booking in localBookings)
+    //             pilgrimNamesCache[booking.Id] = $"حجز #{booking.Id}";
+    //     }
+    // }
+    private async Task LoadPilgrimNamesForLocalAgency()
+    {
+        pilgrimNamesCache = new();
+        var localBookings = agencyBookingsForPayment.Where(b => b.AgencyName == "الوكالة المحلية").ToList();
+
+        if (!localBookings.Any()) return;
+
+        try
+        {
+            foreach (var booking in localBookings)
+            {
+                if (booking.DirectPilgrimId.HasValue)
+                {
+                    // Get pilgrim by ID directly
+                    var pilgrim = await DirectPilgrimService.GetByIdAsync(booking.DirectPilgrimId.Value);
+                    pilgrimNamesCache[booking.Id] = pilgrim?.MainPilgrimName ?? "معتمر مباشر";
+                }
+                else
+                {
+                    pilgrimNamesCache[booking.Id] = "معتمر مباشر";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading pilgrim names: {ex.Message}");
+            foreach (var booking in localBookings)
+                pilgrimNamesCache[booking.Id] = "حجز #{booking.Id}";
+        }
+    }
+
+    // Toast and PrintReceiptDirectly methods remain the same...
+    private bool showToast = false;
+    private bool toastSuccess = false;
+    private string toastMessage = "";
+
+    private void ShowToast(bool success, string message)
+    {
+        toastSuccess = success; toastMessage = message; showToast = true;
+        _ = Task.Run(async () => { await Task.Delay(3000); showToast = false; await InvokeAsync(StateHasChanged); });
+    }
+
+    
 
 }

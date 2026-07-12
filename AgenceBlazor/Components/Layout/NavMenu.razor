@@ -1,4 +1,8 @@
 ﻿@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
+@rendermode InteractiveServer
 
 <nav class="sidebar">
     <div class="sidebar-header">
@@ -58,7 +62,7 @@
             <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Size="Size.Small" />
             <span>الخزينة</span>
         </NavLink>
-        
+
         <NavLink href="/owner-treasury" class="nav-item" ActiveClass="active">
             <MudIcon Icon="@Icons.Material.Rounded.AccountBalanceWallet" Size="Size.Small" />
             <span>خزينة المالك</span>
@@ -73,17 +77,6 @@
             <MudIcon Icon="@Icons.Material.Rounded.Hotel" Size="Size.Small" />
             <span>إدارة الفنادق</span>
         </NavLink>
-
-        @* <NavLink href="/messages" class="nav-item" ActiveClass="active">
-            <MudIcon Icon="@Icons.Material.Rounded.ChatBubbleOutline" Size="Size.Small" />
-            <span>الرسائل</span>
-            <span class="badge">3</span>
-        </NavLink>
-
-        <NavLink href="/calendar" class="nav-item" ActiveClass="active">
-            <MudIcon Icon="@Icons.Material.Rounded.CalendarToday" Size="Size.Small" />
-            <span>التقويم</span>
-        </NavLink> *@
     </div>
 
     <div class="sidebar-footer">
@@ -93,10 +86,45 @@
                 <span>الإعدادات</span>
             </NavLink>
 
-            <NavLink href="/logout" class="nav-item" ActiveClass="active">
+            <button class="nav-item nav-item-button" @onclick="HandleLogout" type="button">
                 <MudIcon Icon="@Icons.Material.Rounded.Logout" Size="Size.Small" />
                 <span>تسجيل الخروج</span>
-            </NavLink>
+            </button>
         </div>
     </div>
 </nav>
+
+<style>
+    .nav-item-button {
+        background: none;
+        border: none;
+        width: 100%;
+        cursor: pointer;
+        text-align: right;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: inherit;
+        transition: background-color 0.2s;
+        border-radius: 8px;
+    }
+
+        .nav-item-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item-button:focus {
+            outline: none;
+        }
+</style>
+
+@code {
+    private void HandleLogout()
+    {
+        // Navigate directly to logout endpoint which will sign out and redirect
+        Navigation.NavigateTo("/Account/Logout", true);
+    }
+}

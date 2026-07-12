@@ -154,6 +154,55 @@
     }
 </div>
 
+
+<!-- Delete Payment Confirmation -->
+@if (showDeletePaymentDialog && paymentToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CancelDeletePayment">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header" style="background:#dc2626;">
+                <h3 style="color:white;">تأكيد الحذف</h3>
+                <button class="modal-close" style="color:white;" @onclick="CancelDeletePayment">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذه الدفعة؟</p>
+                <div class="delete-trip-info">
+                    <div class="info-row">
+                        <span class="info-label">الوكالة:</span>
+                        <span class="info-value">@paymentToDelete.Agency?.AgencyName</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">المبلغ:</span>
+                        <span class="info-value" style="color:#dc2626;font-weight:700;">@paymentToDelete.Amount.ToString("N0") دج</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">التاريخ:</span>
+                        <span class="info-value">@paymentToDelete.PaymentDate.ToString("dd/MM/yyyy")</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">الطريقة:</span>
+                        <span class="info-value">@paymentToDelete.PaymentMethod</span>
+                    </div>
+                </div>
+                <p class="warning-text" style="color:#dc2626;font-size:0.85rem;margin-top:0.75rem;">⚠️ سيتم خصم هذا المبلغ من رصيد الوكالة تلقائياً</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CancelDeletePayment" disabled="@isDeletingPayment">إلغاء</button>
+                <button class="btn-delete" @onclick="DeletePaymentConfirmed" disabled="@isDeletingPayment">
+                    @if (isDeletingPayment)
+                    {
+                        <span class="spinner"></span><span>جاري الحذف...</span>
+                    }
+                    else
+                    {
+                        <span>🗑️ حذف</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<Payment> allPayments = new();
     private List<Payment> filteredPayments = new();
@@ -163,6 +212,11 @@
     private string filterMethod = "";
     private string filterMonth = "";
     private bool isLoading = true;
+
+    // Delete payment
+    private bool showDeletePaymentDialog = false;
+    private Payment paymentToDelete = null;
+    private bool isDeletingPayment = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -242,6 +296,50 @@
         filterMonth = DateTime.Now.Month.ToString();
         ApplyFilters();
         StateHasChanged();
+    }
+
+    private void DeletePayment(Payment payment)
+    {
+        paymentToDelete = payment;
+        showDeletePaymentDialog = true;
+        StateHasChanged();
+    }
+
+    private void CancelDeletePayment()
+    {
+        if (!isDeletingPayment)
+        {
+            showDeletePaymentDialog = false;
+            paymentToDelete = null;
+        }
+    }
+
+    private async Task DeletePaymentConfirmed()
+    {
+        if (paymentToDelete == null) return;
+
+        try
+        {
+            isDeletingPayment = true;
+            StateHasChanged();
+
+            var success = await PaymentService.DeleteAsync(paymentToDelete.Id);
+            if (success)
+            {
+                showDeletePaymentDialog = false;
+                paymentToDelete = null;
+                await LoadDataAsync(); // This will refresh everything
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting payment: {ex.Message}");
+        }
+        finally
+        {
+            isDeletingPayment = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ReprintPayment(Payment payment)
@@ -344,16 +442,12 @@
     <div class='logo bold'>خضور</div>
     <div class='company'>وكالة خضور للسياحة والعمرة</div>
 </div>
-
 <div class='line-thick'></div>
-
 <div class='center'>
     <div class='title bold'>إيصال دفع</div>
     <div class='date'>{payment.PaymentDate:dd/MM/yyyy}</div>
 </div>
-
 <div class='line-dash'></div>
-
 <div class='info-row'>
     <span class='info-label'>الوكالة:</span>
     <span class='info-value'>{payment.Agency?.AgencyName}</span>
@@ -362,15 +456,12 @@
     <span class='info-label'>المدينة:</span>
     <span class='info-value'>{payment.Agency?.City}</span>
 </div>
-
 <div class='line-thick'></div>
-
 <div class='center amount-section'>
     <span class='amount bold'>{payment.Amount:N0}</span>
     <span class='currency'> دج</span>
 </div>
 <div class='center method'>طريقة الدفع: <span class='bolder'>{payment.PaymentMethod}</span></div>
-
 {(string.IsNullOrEmpty(payment.Notes) ? "" : $@"
 <div class='line-dash'></div>
 <div class='center notes-box'>
@@ -378,28 +469,21 @@
     <div class='notes-value'>{payment.Notes}</div>
 </div>
 ")}
-
 <div class='line-thick'></div>
-
 <div class='stamp-area'>
     <div class='stamp-row'>
-        <div class='stamp-box'>
-            <span>ختم<br/>الوكالة</span>
-        </div>
+        <div class='stamp-box'><span>ختم<br/>الوكالة</span></div>
         <div class='sign-box'>
             <div class='sign-line'></div>
             <div class='sign-label'>توقيع المستلم</div>
         </div>
     </div>
 </div>
-
 <div class='line-thick'></div>
-
 <div class='center footer'>
     <div class='footer-main bold'>شكراً لتعاملكم معنا</div>
     <div class='footer-sub'>📞 031 12 34 56 | 📍 برج بوعريريج</div>
 </div>
-
 <script>
 window.onload = function() {{
     window.print();
@@ -411,6 +495,4 @@ window.onload = function() {{
 
         await JS.InvokeVoidAsync("printReceiptText", html);
     }
-
-    private async Task DeletePayment(Payment payment) { }
 }

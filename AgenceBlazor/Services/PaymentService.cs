@@ -48,5 +48,24 @@ namespace AgenceBlazor.Services
                 return false;
             }
         }
+
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            try
+            {
+                var payment = await _context.Payments.FindAsync(id);
+                if (payment == null) return false;
+
+                _context.Payments.Remove(payment);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting payment: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

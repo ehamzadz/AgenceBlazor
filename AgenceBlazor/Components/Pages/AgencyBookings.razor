@@ -6,6 +6,7 @@
 @inject AgencyBookingService AgencyBookingService
 @inject TripService TripService
 @inject AgencyService AgencyService
+@inject PaymentService PaymentService
 @inject IJSRuntime JS
 
 <div class="bookings-container">
@@ -37,12 +38,40 @@
                 <span class="stat-label">الإجمالي</span>
             </div>
             <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.Reduction).ToString("N0")</span>
+                <span class="stat-label">الخصم</span>
+            </div>
+            <div class="stat-item">
                 <span class="stat-value">@filteredBookings.Sum(b => b.Commission).ToString("N0")</span>
                 <span class="stat-label">العمولة</span>
             </div>
             <div class="stat-item">
                 <span class="stat-value">@filteredBookings.Sum(b => b.NetProfit).ToString("N0")</span>
                 <span class="stat-label">الصافي</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.PaidAmount).ToString("N0")</span>
+                <span class="stat-label">المدفوع</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.RemainingAmount).ToString("N0")</span>
+                <span class="stat-label">المتبقي</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Where(b => b.RemainingAmount == 0).Count()</span>
+                <span class="stat-label">مكتمل</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Where(b => b.RemainingAmount > 0).Count()</span>
+                <span class="stat-label">قيد التسديد</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@filteredBookings.Sum(b => b.TotalAmount - b.NetProfit).ToString("N0")</span>
+                <span class="stat-label">إجمالي العمولة + الخصم</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">@((filteredBookings.Sum(b => b.PaidAmount) * 100 / Math.Max(filteredBookings.Sum(b => b.NetProfit), 1)).ToString("F1"))%</span>
+                <span class="stat-label">نسبة التحصيل</span>
             </div>
         </div>
     </div>
@@ -119,8 +148,11 @@
                         <th>الغرف</th>
                         <th>المعتمرين</th>
                         <th>الإجمالي</th>
+                        <th>الخصم</th>
                         <th>العمولة</th>
                         <th>الصافي</th>
+                        <th>المدفوع</th>
+                        <th>المتبقي</th>
                         <th>إجراءات</th>
                     </tr>
                 </thead>
@@ -169,8 +201,11 @@
                             </td>
                             <td class="cell-number">@booking.TotalPilgrims</td>
                             <td class="cell-amount">@booking.TotalAmount.ToString("N0")</td>
+                            <td class="cell-amount discount" style="color:#e65100;">@booking.Reduction.ToString("N0")</td>
                             <td class="cell-amount commission">@booking.Commission.ToString("N0")</td>
                             <td class="cell-amount net">@booking.NetProfit.ToString("N0")</td>
+                            <td class="cell-amount" style="color:#1565c0;">@booking.PaidAmount.ToString("N0")</td>
+                            <td class="cell-amount" style="color:@(booking.RemainingAmount > 0 ? "#dc2626" : "#2e7d32");">@booking.RemainingAmount.ToString("N0")</td>
                             <td class="cell-actions">
                                 <button class="table-action-btn print" title="طباعة" @onclick="() => PrintBookingReceipt(booking)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -279,6 +314,70 @@
         </div>
     </div>
 }
+
+@if (showPaymentModal && paymentBooking != null)
+{
+    <div class="modal-overlay" @onclick="() => { if (!isSavingPayment) showPaymentModal = false; }">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:450px;">
+            <div class="modal-header" style="background:#2e7d32;">
+                <h3 style="color:white;">💵 تسديد حجز</h3>
+                <button class="modal-close" style="color:white;"
+                        @onclick="() => { if (!isSavingPayment) showPaymentModal = false; }">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-summary">
+                    <div class="summary-row"><span>الوكالة:</span><strong>@paymentBooking.AgencyName</strong></div>
+                    <div class="summary-row"><span>الرحلة:</span><strong>@paymentBooking.Trip?.TripNumber</strong></div>
+                    <div class="summary-row"><span>المستحق:</span><strong style="color:#2e7d32;">@paymentBooking.NetProfit.ToString("N0") دج</strong></div>
+                    <div class="summary-row"><span>المدفوع:</span><strong style="color:#1565c0;">@totalPaidForBooking.ToString("N0") دج</strong></div>
+                    <div class="summary-row"><span>المتبقي:</span><strong style="color:#dc2626;">@remainingForBooking.ToString("N0") دج</strong></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">المبلغ *</label>
+                    <input type="number" class="form-input @(paymentAmount > remainingForBooking ? "input-error" : "")"
+                           @bind="paymentAmount" step="1000" min="1" />
+                    @if (!string.IsNullOrEmpty(paymentError))
+                    {
+                        <p class="payment-error">@paymentError</p>
+                    }
+                    else if (paymentAmount > 0)
+                    {
+                        <p class="payment-info">المتبقي بعد الدفع: <strong>@((remainingForBooking - paymentAmount).ToString("N0")) دج</strong></p>
+                    }
+                </div>
+                <div class="form-group">
+                    <label class="form-label">طريقة الدفع</label>
+                    <select class="form-input" @bind="paymentMethod">
+                        <option value="نقداً">نقداً</option>
+                        <option value="تحويل بنكي">تحويل بنكي</option>
+                        <option value="شيك">شيك</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea class="form-input" @bind="paymentNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="() => { if (!isSavingPayment) showPaymentModal = false; }">إلغاء</button>
+                <button class="btn-save" @onclick="SavePayment"
+                        disabled="@(isSavingPayment || paymentAmount <= 0 || paymentAmount > remainingForBooking)">
+                    @if (isSavingPayment)
+                    {
+                        <span class="spinner"></span><span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
 @code {
     private List<AgencyBooking> allBookings = new();
     private List<AgencyBooking> filteredBookings = new();
@@ -289,6 +388,19 @@
     private string filterTripId = "";
     private string filterAgency = "";
     private bool isLoading = true;
+
+    // Payment modal
+    private bool showPaymentModal = false;
+    private AgencyBooking paymentBooking = null;
+    private bool isSavingPayment = false;
+    private decimal paymentAmount = 0;
+    private string paymentMethod = "نقداً";
+    private string paymentNotes = "";
+    private List<Payment> bookingPayments = new();
+    private List<Payment> allPayments = new();
+
+    private decimal totalPaidForBooking => bookingPayments.Sum(p => p.Amount);
+    private decimal remainingForBooking => (paymentBooking?.NetProfit ?? 0) - totalPaidForBooking;
 
     protected override async Task OnInitializedAsync()
     {
@@ -304,10 +416,69 @@
             allBookings = await AgencyBookingService.GetAllAsync();
             trips = await TripService.GetAllTripsAsync();
             agencies = await AgencyService.GetAllAgenciesAsync();
+            allPayments = await PaymentService.GetAllAsync();
             ApplyFilters();
         }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
         finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private async Task AddPayment(AgencyBooking booking)
+    {
+        paymentBooking = booking;
+        paymentAmount = 0;
+        paymentMethod = "نقداً";
+        paymentNotes = "";
+        paymentError = "";
+        bookingPayments = allPayments?.Where(p => p.BookingId == booking.Id).ToList() ?? new();
+        showPaymentModal = true;
+        StateHasChanged();
+    }
+    private string paymentError = "";  // Add this to your variables
+
+    private async Task SavePayment()
+    {
+        if (paymentBooking == null || paymentAmount <= 0) return;
+
+        // Validate amount doesn't exceed remaining
+        if (paymentAmount > remainingForBooking)
+        {
+            paymentError = $"⚠️ المبلغ يتجاوز المبلغ المتبقي ({remainingForBooking:N0} دج)";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            isSavingPayment = true;
+            paymentError = "";
+            StateHasChanged();
+
+            var agency = agencies.FirstOrDefault(a => a.AgencyName == paymentBooking.AgencyName);
+
+            var payment = new Payment
+            {
+                AgencyId = agency?.AgencyId ?? Guid.Empty,
+                BookingId = paymentBooking.Id,
+                Amount = paymentAmount,
+                PaymentMethod = paymentMethod,
+                PaymentDate = DateTime.UtcNow,
+                Notes = paymentNotes
+            };
+
+            await PaymentService.CreateAsync(payment);
+
+            showPaymentModal = false;
+            paymentBooking = null;
+            paymentError = "";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            paymentError = "حدث خطأ أثناء الحفظ";
+        }
+        finally { isSavingPayment = false; StateHasChanged(); }
     }
 
     private void ApplyFilters()
@@ -350,8 +521,6 @@
     private void ResetFilters() { searchQuery = ""; filterMonth = DateTime.Now.Month.ToString(); filterTripId = ""; filterAgency = ""; ApplyFilters(); StateHasChanged(); }
 
     private void ViewDetails(AgencyBooking booking) { }
-    private async Task DeleteBooking(AgencyBooking booking) { }
-    private void AddPayment(AgencyBooking booking) { }
 
     private async Task PrintBookingReceipt(AgencyBooking booking)
     {
@@ -434,6 +603,7 @@
 </body></html>";
         await JS.InvokeVoidAsync("printReceipt", html);
     }
+
     // Delete booking
     private bool showDeleteBookingDialog = false;
     private AgencyBooking bookingToDelete = null;
@@ -445,7 +615,6 @@
     private void ConfirmDeleteBooking(AgencyBooking booking)
     {
         bookingToDelete = booking;
-        // Generate random 5-digit code
         deleteVerificationCode = new Random().Next(10000, 99999).ToString();
         deleteCodeInput = "";
         deleteCodeError = "";

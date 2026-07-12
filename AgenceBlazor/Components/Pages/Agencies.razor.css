@@ -884,3 +884,169 @@
         flex-direction: column;
     }
 }
+
+.pmt-wide {
+    max-width: 800px !important;
+    width: 95%;
+}
+
+.pmt-agency-summary {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.pmt-summary-item {
+    flex: 1;
+    text-align: center;
+}
+
+    .pmt-summary-item span:first-child {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+
+    .pmt-summary-item .debt {
+        color: #1e293b;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .pmt-summary-item .paid {
+        color: #1565c0;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .pmt-summary-item .remaining {
+        color: #dc2626;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .pmt-summary-item .total-pay {
+        color: #2e7d32;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+.pmt-bookings-table-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.pmt-bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+    .pmt-bookings-table th {
+        background: #f1f5f9;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: 600;
+        color: #475569;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .pmt-bookings-table td {
+        padding: 0.5rem;
+        text-align: center;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .pmt-bookings-table .selected-row {
+        background: #f0fdf4;
+    }
+
+.booking-trip-number {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.booking-trip-date {
+    display: block;
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.cell-amount {
+    font-weight: 600;
+    font-family: 'Cairo', monospace;
+}
+
+.pmt-booking-amount-input {
+    width: 110px;
+    padding: 0.4rem;
+    border: 2px solid #2e7d32;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+    .pmt-booking-amount-input:focus {
+        outline: none;
+        border-color: #1b5e20;
+        box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+    }
+
+.not-selected {
+    color: #94a3b8;
+    font-size: 1.2rem;
+}
+
+.pmt-payment-summary {
+    padding: 0.75rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.pmt-no-bookings {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.pmt-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.pilgrim-name-badge {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+

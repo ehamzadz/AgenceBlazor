@@ -78,6 +78,13 @@ namespace AgenceBlazor.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public decimal NetProfit { get; set; }
 
+        [Column("paid_amount")]
+        public decimal PaidAmount { get; set; }
+
+        [Column("remaining_amount")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public decimal RemainingAmount { get; set; }
+
         [Column("status")]
         [StringLength(50)]
         public string Status { get; set; } = "confirmed";
@@ -87,6 +94,9 @@ namespace AgenceBlazor.Models
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; }
+
+        [Column("direct_pilgrim_id")]
+        public int? DirectPilgrimId { get; set; }
 
         // Navigation properties
         [ForeignKey("TripId")]

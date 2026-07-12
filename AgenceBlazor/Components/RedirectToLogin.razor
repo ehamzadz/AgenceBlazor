@@ -1,0 +1,12 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@attribute [AllowAnonymous]
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Use replace: true to avoid adding to browser history
+        Navigation.NavigateTo("/login", true);
+    }
+}

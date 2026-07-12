@@ -14,6 +14,9 @@ namespace AgenceBlazor.Models
         [Column("agency_id")]
         public Guid AgencyId { get; set; }
 
+        [Column("booking_id")]
+        public int? BookingId { get; set; }
+
         [Column("amount")]
         public decimal Amount { get; set; }
 

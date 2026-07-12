@@ -31,7 +31,12 @@ namespace AgenceBlazor.Services
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
         }
-
+        // In DirectPilgrimService.cs
+        public async Task<DirectPilgrim> GetByIdAsync(int id)
+        {
+            return await _context.DirectPilgrims
+                .FirstOrDefaultAsync(p => p.Id == id);
+        }
         public async Task<int> GetTotalPilgrimsByTripAsync(int tripId)
         {
             return await _context.DirectPilgrims
