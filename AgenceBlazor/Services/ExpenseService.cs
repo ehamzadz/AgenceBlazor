@@ -45,6 +45,7 @@ namespace AgenceBlazor.Services
             catch { return false; }
         }
 
+
         public async Task<bool> UpdateAsync(Expense expense)
         {
             try

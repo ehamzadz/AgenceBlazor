@@ -31,12 +31,14 @@ namespace AgenceBlazor.Services
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
         }
-        // In DirectPilgrimService.cs
+
         public async Task<DirectPilgrim> GetByIdAsync(int id)
         {
             return await _context.DirectPilgrims
+                .Include(p => p.FamilyMembers)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
+
         public async Task<int> GetTotalPilgrimsByTripAsync(int tripId)
         {
             return await _context.DirectPilgrims
@@ -65,6 +67,28 @@ namespace AgenceBlazor.Services
                 return true;
             }
             catch { return false; }
+        }
+
+        // Add this method
+        // Services/DirectPilgrimService.cs - Simplified version
+        public async Task<bool> DeleteAsync(int id)
+        {
+            try
+            {
+                var pilgrim = await _context.DirectPilgrims.FindAsync(id);
+
+                if (pilgrim == null) return false;
+
+                _context.DirectPilgrims.Remove(pilgrim); // Cascade will handle family members
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting pilgrim: {ex.Message}");
+                return false;
+            }
         }
     }
 }

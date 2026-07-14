@@ -8,6 +8,7 @@
 @inject AgencyService AgencyService
 @inject PaymentService PaymentService
 @inject IJSRuntime JS
+@inject HotelService HotelService
 
 <div class="bookings-container">
     <div class="page-header">
@@ -226,6 +227,12 @@
                                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                                     </svg>
                                 </button>
+                                <button class="table-action-btn edit" title="تعديل" @onclick="() => EditBooking(booking)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
                                 <button class="table-action-btn delete" title="حذف" @onclick="() => ConfirmDeleteBooking(booking)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -378,6 +385,193 @@
         </div>
     </div>
 }
+
+
+
+<!-- Edit Agency Booking Modal -->
+@if (showEditBookingModal && editBookingModel != null)
+{
+    <div class="bkg-overlay" @onclick="CancelEditBooking">
+        <div class="bkg-card bkg-agency-wide" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="bkg-header">
+                <h3 class="bkg-title">✏️ تعديل حجز وكالة</h3>
+                <button class="bkg-close" @onclick="CancelEditBooking" disabled="@isEditBookingSaving">✕</button>
+            </div>
+
+            <!-- Trip Summary -->
+            <div class="bkg-summary">
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">رقم الرحلة:</span><span class="bkg-summary-val">@editTripInfo?.TripNumber</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">التاريخ:</span><span class="bkg-summary-val">@editTripInfo?.DepartureDate.ToString("dd/MM/yyyy")</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">الخطوط:</span><span class="bkg-summary-val">@editTripInfo?.Airline</span></div>
+                <div class="bkg-summary-row"><span class="bkg-summary-lbl">المقاعد المتبقية:</span><span class="bkg-summary-val">@editTripInfo?.RemainingSeats</span></div>
+                <div class="bkg-route">✈ @editTripInfo?.DepartureFrom → @editTripInfo?.ArrivalTo</div>
+            </div>
+
+            <!-- Body - Two Columns -->
+            <div class="bkg-body">
+                <!-- Left Column -->
+                <div class="bkg-col">
+                    <!-- Hotel -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الفندق</label>
+                        <div class="bkg-btns">
+                            @foreach (var hotel in editHotelList)
+                            {
+                                <button class="bkg-btn @(editSelectedHotel == hotel ? "active" : "")"
+                                        @onclick="() => SelectEditHotel(hotel)">
+                                    @hotel
+                                </button>
+                            }
+                        </div>
+                        @if (editSelectedHotel == "أخرى")
+                        {
+                            <input type="text" class="bkg-input" @bind="editCustomHotel"
+                                   placeholder="أدخل اسم الفندق" style="margin-top:0.5rem;" />
+                        }
+                    </div>
+
+                    <!-- Room Type Distribution with Individual Prices -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">توزيع المعتمرين والأسعار حسب نوع الغرفة</label>
+                        <div class="bkg-room-dist">
+                            <!-- جماعي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">جماعي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Group" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.GroupPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- رباعي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">رباعي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Quadruple" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.QuadruplePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- ثلاثي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">ثلاثي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Triple" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.TriplePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- ثنائي -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">ثنائي</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Double" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.DoublePrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- طفل -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">طفل</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Child" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.ChildPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                            <!-- رضيع -->
+                            <div class="bkg-room-row">
+                                <span class="bkg-room-type">رضيع</span>
+                                <input type="number" class="bkg-input bkg-sm-input" @bind="editRoomCounts.Infant" min="0" placeholder="0" />
+                                <span>معتمر ×</span>
+                                <input type="number" class="bkg-input bkg-price-input" @bind="editRoomPrices.InfantPrice" step="1000" min="0" placeholder="السعر" />
+                                <span>دج</span>
+                            </div>
+                        </div>
+                        <div class="bkg-total-pilgrims">
+                            <span>إجمالي المعتمرين:</span>
+                            <strong>@(editRoomCounts.Group + editRoomCounts.Quadruple + editRoomCounts.Triple + editRoomCounts.Double + editRoomCounts.Child + editRoomCounts.Infant)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="bkg-col">
+                    <!-- Agency Selection -->
+                    <div class="bkg-field">
+                        <label class="bkg-label">الوكالة</label>
+                        <select class="bkg-select" @bind="editSelectedAgency">
+                            <option value="">اختر الوكالة...</option>
+                            @foreach (var agency in agencies)
+                            {
+                                <option value="@agency.AgencyName">@agency.AgencyName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Commission per adult -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">عمولة الوكالة لكل معتمر (دج)</label>
+                        <input type="number" class="bkg-input" @bind="editCommission" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Custom Reduction -->
+                    <div class="bkg-field bkg-currency">
+                        <label class="bkg-label">تخفيض / خصم (دج)</label>
+                        <input type="number" class="bkg-input" @bind="editReduction" step="500" min="0" />
+                        <span class="bkg-currency-sym">دج</span>
+                    </div>
+
+                    <!-- Calculations -->
+                    @{
+                        var eGroupTotal = editRoomCounts.Group * editRoomPrices.GroupPrice;
+                        var eQuadTotal = editRoomCounts.Quadruple * editRoomPrices.QuadruplePrice;
+                        var eTripleTotal = editRoomCounts.Triple * editRoomPrices.TriplePrice;
+                        var eDoubleTotal = editRoomCounts.Double * editRoomPrices.DoublePrice;
+                        var eChildTotal = editRoomCounts.Child * editRoomPrices.ChildPrice;
+                        var eInfantTotal = editRoomCounts.Infant * editRoomPrices.InfantPrice;
+                        var eSubTotal = eGroupTotal + eQuadTotal + eTripleTotal + eDoubleTotal + eChildTotal + eInfantTotal;
+                        var eTotalAmount = eSubTotal - editReduction;
+                        if (eTotalAmount < 0) eTotalAmount = 0;
+                        var eAdultPilgrims = editRoomCounts.Group + editRoomCounts.Quadruple + editRoomCounts.Triple + editRoomCounts.Double;
+                        var eTotalCommission = editCommission * eAdultPilgrims;
+                        var eNetProfit = eTotalAmount - eTotalCommission;
+                    }
+
+                    <!-- Total Amount -->
+                    <div class="bkg-total">
+                        <span>المبلغ الإجمالي</span>
+                        <span class="bkg-total-val">@eTotalAmount.ToString("N0") دج</span>
+                    </div>
+
+                    <!-- Net Profit -->
+                    <div class="bkg-profit">
+                        <span class="bkg-profit-lbl">الربح الصافي</span>
+                        <span class="bkg-profit-val">@eNetProfit.ToString("N0") دج</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bkg-footer">
+                <button class="bkg-btn-cancel" @onclick="CancelEditBooking" disabled="@isEditBookingSaving">
+                    ✕ إلغاء
+                </button>
+                <button class="bkg-btn-save" @onclick="SaveEditBooking" disabled="@isEditBookingSaving">
+                    @if (isEditBookingSaving)
+                    {
+                        <span class="bkg-spinner"></span>
+                        <span>جاري الحفظ...</span>
+                    }
+                    else
+                    {
+                        <span>💾 حفظ التعديلات</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
 @code {
     private List<AgencyBooking> allBookings = new();
     private List<AgencyBooking> filteredBookings = new();
@@ -661,5 +855,195 @@
         }
         catch { }
         finally { isDeletingBooking = false; StateHasChanged(); }
+    }
+
+    // Edit booking variables
+    private bool showEditBookingModal = false;
+    private AgencyBooking? editBookingModel = null;
+    private bool isEditBookingSaving = false;
+    private Trip? editTripInfo = null;
+    private string editSelectedAgency = "";
+    private string editSelectedHotel = "";
+    private string editCustomHotel = "";
+    private decimal editCommission = 5000;
+    private decimal editReduction = 0;
+    private List<string> editHotelList = new();
+    private EditRoomCounts editRoomCounts = new();
+    private EditRoomPrices editRoomPrices = new();
+
+    private class EditRoomCounts
+    {
+        public int Group { get; set; }
+        public int Quadruple { get; set; }
+        public int Triple { get; set; }
+        public int Double { get; set; }
+        public int Child { get; set; }
+        public int Infant { get; set; }
+    }
+
+    private class EditRoomPrices
+    {
+        public decimal GroupPrice { get; set; }
+        public decimal QuadruplePrice { get; set; }
+        public decimal TriplePrice { get; set; }
+        public decimal DoublePrice { get; set; }
+        public decimal ChildPrice { get; set; }
+        public decimal InfantPrice { get; set; }
+    }
+    // Add edit button to actions column in the table (add this button)
+    // <button class="table-action-btn edit" title="تعديل" @onclick="() => EditBooking(booking)">
+    //     <svg>...</svg>
+    // </button>
+
+    private async Task EditBooking(AgencyBooking booking)
+    {
+        Console.WriteLine("=== EditBooking called ===");
+        Console.WriteLine($"Booking ID: {booking.Id}");
+        Console.WriteLine($"Agency: {booking.AgencyName}");
+        editBookingModel = booking;
+
+        // Load trip info
+        editTripInfo = trips.FirstOrDefault(t => t.Id == booking.TripId);
+
+        // Load hotels
+        await LoadEditHotels(booking.TripId);
+
+        // Set values
+        editSelectedAgency = booking.AgencyName ?? "";
+        editSelectedHotel = booking.HotelName ?? "";
+        editCustomHotel = "";
+
+        // Calculate commission per adult
+        var adultCount = booking.TotalPilgrims - booking.ChildCount - booking.InfantCount;
+        editCommission = adultCount > 0 ? booking.Commission / adultCount : 0;
+        editReduction = booking.Reduction;
+
+        editRoomCounts = new EditRoomCounts
+        {
+            Group = booking.GroupCount,
+            Quadruple = booking.QuadrupleCount,
+            Triple = booking.TripleCount,
+            Double = booking.DoubleCount,
+            Child = booking.ChildCount,
+            Infant = booking.InfantCount
+        };
+
+        editRoomPrices = new EditRoomPrices
+        {
+            GroupPrice = booking.GroupPrice,
+            QuadruplePrice = booking.QuadruplePrice,
+            TriplePrice = booking.TriplePrice,
+            DoublePrice = booking.DoublePrice,
+            ChildPrice = booking.ChildPrice,
+            InfantPrice = booking.InfantPrice
+        };
+
+        showEditBookingModal = true;
+        StateHasChanged();
+    }
+
+    private async Task LoadEditHotels(int tripId)
+    {
+        try
+        {
+            editHotelList = await HotelService.GetHotelNamesByTripIdAsync(tripId);
+            if (!editHotelList.Any()) editHotelList = new List<string> { "لا توجد فنادق" };
+        }
+        catch { editHotelList = new List<string> { "لا توجد فنادق" }; }
+    }
+
+    private async Task SelectEditHotel(string hotel)
+    {
+        editSelectedHotel = hotel;
+        if (hotel != "أخرى" && hotel != "لا توجد فنادق" && editBookingModel != null)
+        {
+            var hotelData = await HotelService.GetHotelByNameAndTripAsync(hotel, editBookingModel.TripId);
+            if (hotelData != null)
+            {
+                editRoomPrices = new EditRoomPrices
+                {
+                    GroupPrice = hotelData.GroupPrice,
+                    QuadruplePrice = hotelData.QuadruplePrice,
+                    TriplePrice = hotelData.TriplePrice,
+                    DoublePrice = hotelData.DoublePrice,
+                    ChildPrice = hotelData.ChildPrice,
+                    InfantPrice = hotelData.InfantPrice
+                };
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void CancelEditBooking()
+    {
+        if (!isEditBookingSaving)
+        {
+            showEditBookingModal = false;
+            editBookingModel = null;
+        }
+    }
+
+    private async Task SaveEditBooking()
+    {
+        if (editBookingModel == null) return;
+
+        try
+        {
+            isEditBookingSaving = true;
+            StateHasChanged();
+
+            var eGroupTotal = editRoomCounts.Group * editRoomPrices.GroupPrice;
+            var eQuadTotal = editRoomCounts.Quadruple * editRoomPrices.QuadruplePrice;
+            var eTripleTotal = editRoomCounts.Triple * editRoomPrices.TriplePrice;
+            var eDoubleTotal = editRoomCounts.Double * editRoomPrices.DoublePrice;
+            var eChildTotal = editRoomCounts.Child * editRoomPrices.ChildPrice;
+            var eInfantTotal = editRoomCounts.Infant * editRoomPrices.InfantPrice;
+            var eSubTotal = eGroupTotal + eQuadTotal + eTripleTotal + eDoubleTotal + eChildTotal + eInfantTotal;
+            var eTotalAmount = eSubTotal - editReduction;
+            if (eTotalAmount < 0) eTotalAmount = 0;
+            var eAdultPilgrims = editRoomCounts.Group + editRoomCounts.Quadruple + editRoomCounts.Triple + editRoomCounts.Double;
+            var eTotalCommission = editCommission * eAdultPilgrims;
+
+            var agency = agencies.FirstOrDefault(a => a.AgencyName == editSelectedAgency);
+
+            // Update booking
+            editBookingModel.AgencyId = agency?.AgencyId ?? Guid.Empty;
+            editBookingModel.AgencyName = editSelectedAgency;
+            editBookingModel.HotelName = editSelectedHotel == "أخرى" ? editCustomHotel : editSelectedHotel;
+            editBookingModel.GroupCount = editRoomCounts.Group;
+            editBookingModel.QuadrupleCount = editRoomCounts.Quadruple;
+            editBookingModel.TripleCount = editRoomCounts.Triple;
+            editBookingModel.DoubleCount = editRoomCounts.Double;
+            editBookingModel.ChildCount = editRoomCounts.Child;
+            editBookingModel.InfantCount = editRoomCounts.Infant;
+            editBookingModel.GroupPrice = editRoomPrices.GroupPrice;
+            editBookingModel.QuadruplePrice = editRoomPrices.QuadruplePrice;
+            editBookingModel.TriplePrice = editRoomPrices.TriplePrice;
+            editBookingModel.DoublePrice = editRoomPrices.DoublePrice;
+            editBookingModel.ChildPrice = editRoomPrices.ChildPrice;
+            editBookingModel.InfantPrice = editRoomPrices.InfantPrice;
+            editBookingModel.TotalAmount = eTotalAmount;
+            editBookingModel.Commission = eTotalCommission;
+            editBookingModel.Reduction = editReduction;
+            editBookingModel.UpdatedAt = DateTime.UtcNow;
+
+            var success = await AgencyBookingService.UpdateAsync(editBookingModel);
+
+            if (success)
+            {
+                showEditBookingModal = false;
+                editBookingModel = null;
+                await LoadDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Edit error: {ex.Message}");
+        }
+        finally
+        {
+            isEditBookingSaving = false;
+            StateHasChanged();
+        }
     }
 }

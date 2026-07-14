@@ -24,6 +24,8 @@ namespace AgenceBlazor.Data
         public DbSet<DirectPilgrim> DirectPilgrims { get; set; }
         public DbSet<DirectPilgrimFamily> DirectPilgrimFamilies { get; set; }
         public DbSet<TripGuide> TripGuides { get; set; }
+        public DbSet<ApplicationUser> Users { get; set; }
+        public DbSet<TripAirlinePricing> TripAirlinePricings { get; set; }
 
 
 
@@ -498,6 +500,74 @@ namespace AgenceBlazor.Data
                       .HasForeignKey(e => e.TripId)
                       .HasConstraintName("tripguides_tripid_fkey")
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            modelBuilder.Entity<TripAirlinePricing>(entity =>
+            {
+                entity.ToTable("trip_airline_pricing");
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.TripId).HasColumnName("trip_id");
+                entity.Property(e => e.AdultPrice).HasColumnName("adult_price");
+                entity.Property(e => e.ChildPrice).HasColumnName("child_price");
+                entity.Property(e => e.InfantPrice).HasColumnName("infant_price");
+                entity.Property(e => e.FreeSeatsCount).HasColumnName("free_seats_count");
+                entity.Property(e => e.FreeSeatPrice).HasColumnName("free_seat_price");
+                entity.Property(e => e.AdultCount).HasColumnName("adult_count");
+                entity.Property(e => e.ChildCount).HasColumnName("child_count");
+                entity.Property(e => e.InfantCount).HasColumnName("infant_count");
+
+                // Computed columns (readonly)
+                entity.Property(e => e.TotalPassengers)
+                    .HasColumnName("total_passengers")
+                    .HasComputedColumnSql("adult_count + child_count + infant_count + free_seats_count", stored: true);
+
+                entity.Property(e => e.AdultTotal)
+                    .HasColumnName("adult_total")
+                    .HasComputedColumnSql("adult_count * adult_price", stored: true);
+
+                entity.Property(e => e.ChildTotal)
+                    .HasColumnName("child_total")
+                    .HasComputedColumnSql("child_count * child_price", stored: true);
+
+                entity.Property(e => e.InfantTotal)
+                    .HasColumnName("infant_total")
+                    .HasComputedColumnSql("infant_count * infant_price", stored: true);
+
+                entity.Property(e => e.FreeSeatsTotal)
+                    .HasColumnName("free_seats_total")
+                    .HasComputedColumnSql("free_seats_count * free_seat_price", stored: true);
+
+                entity.Property(e => e.TotalAirlineCost)
+                    .HasColumnName("total_airline_cost")
+                    .HasComputedColumnSql("(adult_count * adult_price) + (child_count * child_price) + (infant_count * infant_price) + (free_seats_count * free_seat_price)", stored: true);
+
+                entity.Property(e => e.Notes).HasColumnName("notes");
+                entity.Property(e => e.IsPaid).HasColumnName("is_paid");
+                entity.Property(e => e.PaidDate).HasColumnName("paid_date");
+                entity.Property(e => e.PaidAmount).HasColumnName("paid_amount");
+
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("created_at")
+                    .HasConversion(
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc),
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                    );
+
+                entity.Property(e => e.UpdatedAt)
+                    .HasColumnName("updated_at")
+                    .HasConversion(
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc),
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                    );
+
+                // Relationships
+                entity.HasOne(e => e.Trip)
+                    .WithMany()
+                    .HasForeignKey(e => e.TripId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
         }

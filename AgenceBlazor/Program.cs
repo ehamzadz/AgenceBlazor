@@ -52,6 +52,8 @@ builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<TreasuryService>();
 builder.Services.AddScoped<DirectPilgrimService>();
 builder.Services.AddScoped<ITripGuideService, TripGuideService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<TripAirlinePricingService>();
 
 var app = builder.Build();
 
@@ -76,18 +78,24 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 // Login endpoint
+
 app.MapPost("/Account/Login", async (HttpContext http,
     [FromForm] string username,
     [FromForm] string password,
-    [FromForm] string? returnUrl) =>
+    [FromForm] string? returnUrl,
+    UserService userService) =>
 {
-    if (username == "khoudour" && password == "123456**")
+    var user = await userService.ValidateUser(username, password);
+
+    if (user != null)
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, "Admin")
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
         };
+
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
@@ -118,5 +126,30 @@ app.MapPost("/Account/Logout", async (HttpContext http) =>
 })
 .AllowAnonymous()
 .DisableAntiforgery();
+
+using (var scope = app.Services.CreateScope())
+{
+    var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+
+    try
+    {
+        var result1 = await userService.CreateUser("ayoub", "ayoub123", "Admin");
+        Console.WriteLine($"User ayoub: {(result1 ? "seeded/updated" : "failed")}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error with ayoub: {ex.Message}");
+    }
+
+    try
+    {
+        var result2 = await userService.CreateUser("ilyes", "ilyes123", "Admin");
+        Console.WriteLine($"User ilyes: {(result2 ? "seeded/updated" : "failed")}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error with ilyes: {ex.Message}");
+    }
+}
 
 app.Run();

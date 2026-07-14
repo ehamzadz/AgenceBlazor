@@ -95,5 +95,21 @@ namespace AgenceBlazor.Services
             }
             catch { return false; }
         }
+
+        public async Task<bool> UpdateAsync(AgencyBooking booking)
+        {
+            try
+            {
+                booking.UpdatedAt = DateTime.UtcNow;
+                _context.AgencyBookings.Update(booking);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating booking: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

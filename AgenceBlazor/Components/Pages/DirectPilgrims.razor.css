@@ -1009,4 +1009,357 @@
         background: #fef2f2;
         color: #dc2626;
         border: 1px solid #fecaca;
+
     }
+
+
+/* Delete button styles */
+.card-btn.delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+    .card-btn.delete-btn:hover {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+    }
+
+.action-btn.delete {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+    .action-btn.delete:hover {
+        background: #dc2626;
+        color: white;
+    }
+
+.action-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+/* Delete modal */
+.delete-modal {
+    max-width: 420px;
+}
+
+.delete-warning {
+    text-align: center;
+    padding: 16px 0;
+}
+
+    .delete-warning svg {
+        margin-bottom: 12px;
+    }
+
+    .delete-warning p {
+        color: #6b7280;
+        margin: 8px 0;
+    }
+
+.pilgrim-delete-info {
+    background: #fef2f2;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+    .pilgrim-delete-info strong {
+        color: #dc2626;
+        font-size: 16px;
+    }
+
+.delete-amount {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.delete-note {
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.btn-delete {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btn-delete:hover:not(:disabled) {
+        background: #b91c1c;
+    }
+
+    .btn-delete:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+/* Table */
+.table-wrapper {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+    .data-table thead {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .data-table th {
+        padding: 0.85rem 0.75rem;
+        text-align: right;
+        font-weight: 700;
+        color: #334155;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .data-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+            border-left: 3px solid #16a34a;
+        }
+
+.name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.name-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);
+}
+
+.amount-cell, .net-cell {
+    font-weight: 700;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    text-align: right;
+    direction: ltr;
+}
+
+.discount-cell {
+    color: #dc2626;
+    text-align: right;
+    font-weight: 600;
+}
+
+.net-cell {
+    color: #16a34a;
+}
+
+.paid-cell {
+    color: #16a34a;
+    font-weight: 600;
+    text-align: right;
+}
+
+.remaining-cell {
+    color: #dc2626;
+    font-weight: 700;
+    text-align: right;
+}
+
+    .remaining-cell.zero {
+        color: #16a34a;
+        font-size: 1.1rem;
+        text-align: center;
+    }
+
+/* Action Buttons Container */
+.action-buttons {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Action Button Base */
+.action-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .action-btn:active {
+        transform: translateY(0);
+    }
+
+    /* Details Button */
+    .action-btn.details {
+        background: #eff6ff;
+        color: #3b82f6;
+        border-color: #bfdbfe;
+    }
+
+        .action-btn.details:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+    /* Payment Button */
+    .action-btn.pay {
+        background: #fef3c7;
+        color: #d97706;
+        border-color: #fde68a;
+    }
+
+        .action-btn.pay:hover {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+    /* Delete Button */
+    .action-btn.delete {
+        background: #fef2f2;
+        color: #ef4444;
+        border-color: #fecaca;
+    }
+
+        .action-btn.delete:hover {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+    /* Tooltip on hover */
+    .action-btn::after {
+        content: attr(title);
+        position: absolute;
+        bottom: -30px;
+        right: 50%;
+        transform: translateX(50%);
+        background: #1f2937;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        z-index: 10;
+    }
+
+    .action-btn:hover::after {
+        opacity: 1;
+    }
+
+/* Status badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+    .status-badge.paid {
+        background: #f0fdf4;
+        color: #16a34a;
+        border: 1px solid #bbf7d0;
+    }
+
+        .status-badge.paid::before {
+            content: '✓';
+            font-weight: bold;
+        }
+
+    .status-badge.partial {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+        .status-badge.partial::before {
+            content: '◐';
+            font-weight: bold;
+        }
+
+    .status-badge.pending {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+        .status-badge.pending::before {
+            content: '○';
+            font-weight: bold;
+        }
+
+/* Trip Badge in table */
+.trip-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #16a34a;
+    background: #f0fdf4;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    border: 1px solid #bbf7d0;
+}
