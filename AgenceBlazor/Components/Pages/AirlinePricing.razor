@@ -7,6 +7,7 @@
 @inject TripService TripService
 @inject IJSRuntime JS
 @inject ExpenseService ExpenseService
+@inject AgencyBookingService AgencyBookingService
 
 <div class="pricing-container">
     <!-- Header -->
@@ -24,20 +25,108 @@
         </div>
         <div class="header-stats">
             <div class="stat-item">
-                <span class="stat-value">@filteredPricingList.Count</span>
-                <span class="stat-label">تسعيرة</span>
+                <div class="stat-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Count</span>
+                    <span class="stat-label">تسعيرة</span>
+                </div>
             </div>
             <div class="stat-item">
-                <span class="stat-value">@filteredPricingList.Sum(p => p.TotalAirlineCost).ToString("N0")</span>
-                <span class="stat-label">إجمالي التكاليف</span>
+                <div class="stat-icon total">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Sum(p => p.TotalAirlineCost).ToString("N0")</span>
+                    <span class="stat-label">إجمالي التكاليف</span>
+                </div>
             </div>
             <div class="stat-item">
-                <span class="stat-value">@filteredPricingList.Count(p => p.IsPaid)</span>
-                <span class="stat-label">مدفوع</span>
+                <div class="stat-icon paid">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Sum(p => p.PaidAmount).ToString("N0")</span>
+                    <span class="stat-label">إجمالي المدفوع</span>
+                </div>
             </div>
             <div class="stat-item">
-                <span class="stat-value">@filteredPricingList.Sum(p => p.TotalPassengers)</span>
-                <span class="stat-label">إجمالي الركاب</span>
+                <div class="stat-icon unpaid">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Where(p => !p.IsPaid).Sum(p => p.RemainingAmount).ToString("N0")</span>
+                    <span class="stat-label">المتبقي</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon passengers">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Sum(p => p.TotalPassengers)</span>
+                    <span class="stat-label">إجمالي الركاب</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon payment-rate">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        @{
+                            var totalCost = filteredPricingList.Sum(p => p.TotalAirlineCost);
+                            var totalPaid = filteredPricingList.Sum(p => p.PaidAmount);
+                            var paymentRate = totalCost > 0 ? Math.Round((totalPaid / totalCost) * 100, 1) : 0;
+                        }
+                        @paymentRate%
+                    </span>
+                    <span class="stat-label">نسبة الدفع</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon trips">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Select(p => p.TripId).Distinct().Count()</span>
+                    <span class="stat-label">رحلة</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon airlines-count">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@filteredPricingList.Select(p => p.Trip?.Airline).Where(a => !string.IsNullOrEmpty(a)).Distinct().Count()</span>
+                    <span class="stat-label">شركة طيران</span>
+                </div>
             </div>
         </div>
     </div>
@@ -109,34 +198,45 @@
     </div>
 </div>
 
-    <!-- Trips without pricing -->
+    <!-- Trips without pricing - Collapsible -->
     @if (tripsWithoutPricing.Any())
     {
-        <div class="trips-without-pricing">
-            <div class="section-header">
-                <h3>📋 رحلات بدون تسعيرة</h3>
-                <span class="count-badge">@tripsWithoutPricing.Count رحلة</span>
+        <div class="trips-without-pricing @(isWithoutPricingCollapsed ? "collapsed" : "")">
+            <div class="section-header" @onclick="() => isWithoutPricingCollapsed = !isWithoutPricingCollapsed">
+                <div class="section-header-left">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         class="collapse-icon @(isWithoutPricingCollapsed ? "" : "rotated")">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                    <h3>📋 رحلات بدون تسعيرة</h3>
+                    <span class="count-badge">@tripsWithoutPricing.Count رحلة</span>
+                </div>
+                <span class="collapse-hint">@(isWithoutPricingCollapsed ? "اضغط للعرض" : "اضغط للإخفاء")</span>
             </div>
-            <div class="trips-grid">
-                @foreach (var trip in tripsWithoutPricing)
-                {
-                    <div class="trip-item">
-                        <div class="trip-item-info">
-                            <span class="trip-item-number">@trip.TripNumber</span>
-                            <span class="trip-item-name">@trip.TripName</span>
-                            <span class="trip-item-date">@trip.DepartureDate.ToString("dd/MM/yyyy")</span>
-                            <span class="trip-item-seats">@trip.TotalSeats مقعد</span>
+            @if (!isWithoutPricingCollapsed)
+            {
+                <div class="trips-grid">
+                    @foreach (var trip in tripsWithoutPricing)
+                    {
+                        <div class="trip-item">
+                            <div class="trip-item-info">
+                                <span class="trip-item-number">@trip.TripNumber</span>
+                                <span class="trip-item-name">@trip.TripName</span>
+                                <span class="trip-item-date">@trip.DepartureDate.ToString("dd/MM/yyyy")</span>
+                                <span class="trip-item-seats">@trip.TotalSeats مقعد</span>
+                                <span class="trip-item-airline">✈ @trip.Airline</span>
+                            </div>
+                            <button class="add-pricing-btn" @onclick="() => OpenNewPricingModal(trip)" @onclick:stopPropagation="true">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                إضافة تسعيرة
+                            </button>
                         </div>
-                        <button class="add-pricing-btn" @onclick="() => OpenNewPricingModal(trip)">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
-                            إضافة تسعيرة
-                        </button>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
+            }
         </div>
     }
 
@@ -159,152 +259,229 @@
         </div>
     }
     else if (filteredPricingList.Any())
-    {
-        <div class="pricing-grid">
-            @foreach (var pricing in filteredPricingList)
-            {
-                <div class="pricing-card">
-                    <div class="card-accent"></div>
-                    <div class="card-body">
-                        <!-- Trip Info -->
-                        <div class="trip-header">
-                            <div class="trip-number">@pricing.Trip?.TripNumber</div>
-                            <h3 class="trip-name">@pricing.Trip?.TripName</h3>
-                            <span class="trip-date">@pricing.Trip?.DepartureDate.ToString("dd/MM/yyyy")</span>
+        {
+            <div class="pricing-grid">
+                @foreach (var pricing in filteredPricingList)
+                {
+                    <div class="pricing-card @(pricing.IsPaid ? "paid" : pricing.PaidAmount > 0 ? "partial" : "unpaid")">
+                        <!-- Status Ribbon -->
+                        <div class="status-ribbon @(pricing.IsPaid ? "paid" : pricing.PaidAmount > 0 ? "partial" : "unpaid")">
+                            <span>@(pricing.IsPaid ? "✅ مدفوع" : pricing.PaidAmount > 0 ? "⚠️ جزئي" : "❌ غير مدفوع")</span>
                         </div>
 
-                        <!-- Route -->
-                        <div class="route-info">
-                            <span>@pricing.Trip?.DepartureFrom</span>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                                <polyline points="12 5 19 12 12 19" />
-                            </svg>
-                            <span>@pricing.Trip?.ArrivalTo</span>
-                        </div>
-
-                        <!-- Passenger Distribution -->
-                        <div class="passenger-dist">
-                            <div class="passenger-item">
-                                <span class="passenger-icon">👤</span>
-                                <span class="passenger-label">بالغين</span>
-                                <span class="passenger-count">@pricing.AdultCount</span>
-                                <span class="passenger-price">× @pricing.AdultPrice.ToString("N0")</span>
-                                <span class="passenger-total">= @pricing.AdultTotal.ToString("N0")</span>
+                        <div class="card-body">
+                            <!-- Trip Header -->
+                            <div class="trip-header">
+                                <div class="trip-meta">
+                                    <span class="trip-number">@pricing.Trip?.TripNumber</span>
+                                    <span class="trip-airline-badge">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                        </svg>
+                                        @pricing.Trip?.Airline
+                                    </span>
+                                </div>
+                                <h3 class="trip-name">@pricing.Trip?.TripName</h3>
+                                <span class="trip-date">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                    @pricing.Trip?.DepartureDate.ToString("dd MMMM yyyy", new CultureInfo("ar-SA"))
+                                </span>
                             </div>
-                            @if (pricing.ChildCount > 0)
+
+                            <!-- Route with Animation -->
+                            <div class="route-section">
+                                <div class="route-city departure">
+                                    <span class="city-code">@GetCityCode(pricing.Trip?.DepartureFrom)</span>
+                                    <span class="city-name">@pricing.Trip?.DepartureFrom</span>
+                                </div>
+                                <div class="route-line-container">
+                                    <div class="route-dot start"></div>
+                                    <div class="route-line">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="plane-icon">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                        </svg>
+                                    </div>
+                                    <div class="route-dot end"></div>
+                                </div>
+                                <div class="route-city arrival">
+                                    <span class="city-code">@GetCityCode(pricing.Trip?.ArrivalTo)</span>
+                                    <span class="city-name">@pricing.Trip?.ArrivalTo</span>
+                                </div>
+                            </div>
+
+                            <!-- Passenger Cards -->
+                            <div class="passenger-cards">
+                                @if (pricing.AdultCount > 0)
+                                {
+                                    <div class="passenger-card">
+                                        <div class="passenger-card-header">
+                                            <span class="passenger-emoji">👤</span>
+                                            <span class="passenger-type">بالغين</span>
+                                            <span class="passenger-badge">@pricing.AdultCount</span>
+                                        </div>
+                                        <div class="passenger-card-body">
+                                            <div class="price-breakdown">
+                                                <span>@pricing.AdultCount معتمر × @pricing.AdultPrice.ToString("N0")</span>
+                                            </div>
+                                            <div class="price-total">@pricing.AdultTotal.ToString("N0") <small>دج</small></div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (pricing.ChildCount > 0)
+                                {
+                                    <div class="passenger-card child">
+                                        <div class="passenger-card-header">
+                                            <span class="passenger-emoji">👶</span>
+                                            <span class="passenger-type">أطفال</span>
+                                            <span class="passenger-badge">@pricing.ChildCount</span>
+                                        </div>
+                                        <div class="passenger-card-body">
+                                            <div class="price-breakdown">
+                                                <span>@pricing.ChildCount طفل × @pricing.ChildPrice.ToString("N0")</span>
+                                            </div>
+                                            <div class="price-total">@pricing.ChildTotal.ToString("N0") <small>دج</small></div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (pricing.InfantCount > 0)
+                                {
+                                    <div class="passenger-card infant">
+                                        <div class="passenger-card-header">
+                                            <span class="passenger-emoji">🍼</span>
+                                            <span class="passenger-type">رضع</span>
+                                            <span class="passenger-badge">@pricing.InfantCount</span>
+                                        </div>
+                                        <div class="passenger-card-body">
+                                            <div class="price-breakdown">
+                                                <span>@pricing.InfantCount رضيع × @pricing.InfantPrice.ToString("N0")</span>
+                                            </div>
+                                            <div class="price-total">@pricing.InfantTotal.ToString("N0") <small>دج</small></div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (pricing.FreeSeatsCount > 0)
+                                {
+                                    <div class="passenger-card free">
+                                        <div class="passenger-card-header">
+                                            <span class="passenger-emoji">🎫</span>
+                                            <span class="passenger-type">مقاعد رمزية</span>
+                                            <span class="passenger-badge">@pricing.FreeSeatsCount</span>
+                                        </div>
+                                        <div class="passenger-card-body">
+                                            <div class="price-breakdown">
+                                                <span>@pricing.FreeSeatsCount مقعد × @pricing.FreeSeatPrice.ToString("N0")</span>
+                                            </div>
+                                            <div class="price-total">@pricing.FreeSeatsTotal.ToString("N0") <small>دج</small></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Stats Row -->
+                            <div class="stats-row">
+                                <div class="stat-badge">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                    </svg>
+                                    <span>@pricing.TotalPassengers راكب</span>
+                                </div>
+                                <div class="stat-badge seats">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="3" y1="9" x2="21" y2="9" />
+                                    </svg>
+                                    <span>@pricing.TotalPassengers / @pricing.Trip?.TotalSeats</span>
+                                </div>
+                            </div>
+
+                            <!-- Grand Total -->
+                            <div class="grand-total-section">
+                                <div class="total-label">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                    <span>إجمالي التكلفة</span>
+                                </div>
+                                <div class="total-amount">@pricing.TotalAirlineCost.ToString("N0") <small>دج</small></div>
+                            </div>
+
+                            <!-- Payment Progress -->
+                            <div class="payment-section">
+                                <div class="payment-info-row">
+                                    <span class="payment-label">المدفوع</span>
+                                    <span class="payment-value paid">@pricing.PaidAmount.ToString("N0") دج</span>
+                                </div>
+                                <div class="payment-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill @(pricing.IsPaid ? "complete" : "")"
+                                             style="width:@pricing.PaymentPercentage%"></div>
+                                    </div>
+                                    <span class="progress-percent">@pricing.PaymentPercentage%</span>
+                                </div>
+                                <div class="payment-info-row">
+                                    <span class="payment-label">المتبقي</span>
+                                    <span class="payment-value remaining">@pricing.RemainingAmount.ToString("N0") دج</span>
+                                </div>
+                            </div>
+
+                            <!-- Notes -->
+                            @if (!string.IsNullOrEmpty(pricing.Notes))
                             {
-                                <div class="passenger-item">
-                                    <span class="passenger-icon">👶</span>
-                                    <span class="passenger-label">أطفال</span>
-                                    <span class="passenger-count">@pricing.ChildCount</span>
-                                    <span class="passenger-price">× @pricing.ChildPrice.ToString("N0")</span>
-                                    <span class="passenger-total">= @pricing.ChildTotal.ToString("N0")</span>
+                                <div class="notes-bubble">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    <span>@pricing.Notes</span>
                                 </div>
                             }
-                            @if (pricing.InfantCount > 0)
-                            {
-                                <div class="passenger-item">
-                                    <span class="passenger-icon">🍼</span>
-                                    <span class="passenger-label">رضع</span>
-                                    <span class="passenger-count">@pricing.InfantCount</span>
-                                    <span class="passenger-price">× @pricing.InfantPrice.ToString("N0")</span>
-                                    <span class="passenger-total">= @pricing.InfantTotal.ToString("N0")</span>
-                                </div>
-                            }
-                            @if (pricing.FreeSeatsCount > 0)
-                            {
-                                <div class="passenger-item free">
-                                    <span class="passenger-icon">🎫</span>
-                                    <span class="passenger-label">مقاعد رمزية</span>
-                                    <span class="passenger-count">@pricing.FreeSeatsCount</span>
-                                    <span class="passenger-price">× @pricing.FreeSeatPrice.ToString("N0")</span>
-                                    <span class="passenger-total">= @pricing.FreeSeatsTotal.ToString("N0")</span>
-                                </div>
-                            }
-                        </div>
 
-                        <div class="card-divider"></div>
-
-                        <!-- Totals -->
-                        <div class="totals-section">
-                            <div class="total-row">
-                                <span>إجمالي الركاب</span>
-                                <strong>@pricing.TotalPassengers / @pricing.Trip?.TotalSeats</strong>
+                            <!-- Actions -->
+                            <div class="card-actions">
+                                <button class="action-btn edit" @onclick="() => OpenEditModal(pricing)" title="تعديل التسعيرة">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                    تعديل
+                                </button>
+                                <button class="action-btn pay @(pricing.IsPaid ? "done" : "")"
+                                        @onclick="() => OpenPaymentModal(pricing)"
+                                        title="@(pricing.IsPaid ? "مدفوع بالكامل" : "تسديد دفعة")"
+                                        disabled="@pricing.IsPaid">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        @if (pricing.IsPaid)
+                                        {
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                            <polyline points="22 4 12 14.01 9 11.01" />
+                                        }
+                                        else
+                                        {
+                                            <line x1="12" y1="1" x2="12" y2="23" />
+                                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                        }
+                                    </svg>
+                                    @(pricing.IsPaid ? "مدفوع" : "تسديد")
+                                </button>
+                                <button class="action-btn delete" @onclick="() => ConfirmDelete(pricing)" title="حذف التسعيرة">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                    حذف
+                                </button>
                             </div>
-                            <div class="total-row grand-total">
-                                <span>إجمالي التكلفة</span>
-                                <strong class="grand-amount">@pricing.TotalAirlineCost.ToString("N0") دج</strong>
-                            </div>
-                        </div>
-
-                        <!-- Payment Status -->
-                        <div class="payment-status @(pricing.IsPaid ? "paid" : pricing.PaidAmount > 0 ? "partial" : "pending")">
-                            @if (pricing.IsPaid)
-                            {
-                                <span>✅ مدفوع بالكامل</span>
-                            }
-                            else if (pricing.PaidAmount > 0)
-                            {
-                                <span>⚠️ مدفوع جزئياً: @pricing.PaidAmount.ToString("N0") دج</span>
-                                <span>المتبقي: @pricing.RemainingAmount.ToString("N0") دج</span>
-                            }
-                            else
-                            {
-                                <span>❌ غير مدفوع</span>
-                            }
-                        </div>
-
-                        <!-- Progress Bar -->
-                        @if (pricing.TotalAirlineCost > 0)
-                        {
-                            <div class="payment-progress">
-                                <div class="progress-bar">
-                                    <div class="progress-fill @(pricing.IsPaid ? "complete" : "")"
-                                         style="width:@pricing.PaymentPercentage%"></div>
-                                </div>
-                                <span class="progress-text">@pricing.PaymentPercentage%</span>
-                            </div>
-                        }
-
-                        <!-- Notes -->
-                        @if (!string.IsNullOrEmpty(pricing.Notes))
-                        {
-                            <div class="notes-section">
-                                <span class="notes-label">📝 ملاحظات:</span>
-                                <span class="notes-text">@pricing.Notes</span>
-                            </div>
-                        }
-
-                        <!-- Actions -->
-                        <div class="card-actions">
-                            <button class="action-btn edit-btn" @onclick="() => OpenEditModal(pricing)" title="تعديل">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                                تعديل
-                            </button>
-                            <button class="action-btn pay-btn" @onclick="() => OpenPaymentModal(pricing)" title="تسديد" disabled="@pricing.IsPaid">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="12" y1="1" x2="12" y2="23" />
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                                </svg>
-                                تسديد
-                            </button>
-                            <button class="action-btn delete-btn" @onclick="() => ConfirmDelete(pricing)" title="حذف">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                                حذف
-                            </button>
                         </div>
                     </div>
-                </div>
-            }
-        </div>
-    }
+                }
+            </div>
+        }
     else
     {
         <div class="no-results">
@@ -334,7 +511,31 @@
                     <div class="summary-row"><span>التاريخ:</span><strong>@selectedTrip.DepartureDate.ToString("dd/MM/yyyy")</strong></div>
                     <div class="route">✈ @selectedTrip.DepartureFrom → @selectedTrip.ArrivalTo</div>
                 </div>
-
+                @if (isNewPricing)
+                {
+                    <div class="current-counts-info">
+                        <h4>📊 إحصائيات المعتمرين الحالية</h4>
+                        <div class="counts-grid">
+                            <div class="count-item">
+                                <span class="count-label">البالغين</span>
+                                <span class="count-value">@editModel.AdultCount</span>
+                            </div>
+                            <div class="count-item">
+                                <span class="count-label">الأطفال</span>
+                                <span class="count-value">@editModel.ChildCount</span>
+                            </div>
+                            <div class="count-item">
+                                <span class="count-label">الرضع</span>
+                                <span class="count-value">@editModel.InfantCount</span>
+                            </div>
+                            <div class="count-item total">
+                                <span class="count-label">الإجمالي</span>
+                                <span class="count-value">@(editModel.AdultCount + editModel.ChildCount + editModel.InfantCount)</span>
+                            </div>
+                        </div>
+                        <p class="counts-note">تم جلب هذه الأرقام من حجوزات الوكالات</p>
+                    </div>
+                }
                 <!-- Prices -->
                 <div class="form-section">
                     <h4>💰 أسعار التذاكر</h4>
@@ -627,6 +828,7 @@
     private string airlinePaymentMethod = "نقداً";
     private string airlinePaymentNotes = "";
     private string airlinePaymentError = "";
+    private bool isWithoutPricingCollapsed = true; // false = expanded by default, set to true to collapse
 
     protected override async Task OnInitializedAsync()
     {
@@ -760,6 +962,10 @@
     private async Task OpenNewPricingModal(Trip trip)
     {
         selectedTrip = trip;
+
+        // Fetch real pilgrim data from agency bookings
+        var pilgrimStats = await GetPilgrimStatsForTrip(trip.Id);
+
         editModel = new TripAirlinePricing
         {
             TripId = trip.Id,
@@ -767,14 +973,53 @@
             ChildPrice = 45000,
             InfantPrice = 15000,
             FreeSeatPrice = 18500,
-            AdultCount = trip.TotalSeats,
-            ChildCount = 0,
-            InfantCount = 0,
-            FreeSeatsCount = 0
+            AdultCount = pilgrimStats.AdultCount,      // Real adult count
+            ChildCount = pilgrimStats.ChildCount,      // Real child count
+            InfantCount = pilgrimStats.InfantCount,    // Real infant count
+            FreeSeatsCount = 0,
+            Notes = $"تم إنشاء التسعيرة تلقائياً - {DateTime.Now:dd/MM/yyyy HH:mm}"
         };
+
         isNewPricing = true;
         showEditModal = true;
         StateHasChanged();
+    }
+    private async Task<(int AdultCount, int ChildCount, int InfantCount, int TotalPilgrims)> GetPilgrimStatsForTrip(int tripId)
+    {
+        try
+        {
+            // Get all agency bookings for this trip
+            var bookings = await AgencyBookingService.GetByTripIdAsync(tripId);
+
+            if (bookings == null || !bookings.Any())
+            {
+                // No bookings found, return zeros
+                return (0, 0, 0, 0);
+            }
+
+            // Count pilgrims by type
+            // Adults = Group + Quadruple + Triple + Double (all room types except child/infant)
+            var adultCount = bookings.Sum(b => b.GroupCount + b.QuadrupleCount + b.TripleCount + b.DoubleCount);
+
+            // Children
+            var childCount = bookings.Sum(b => b.ChildCount);
+
+            // Infants
+            var infantCount = bookings.Sum(b => b.InfantCount);
+
+            // Total
+            var totalPilgrims = bookings.Sum(b => b.TotalPilgrims);
+
+            Console.WriteLine($"Trip {tripId} pilgrim stats: Adults={adultCount}, Children={childCount}, Infants={infantCount}, Total={totalPilgrims}");
+
+            return (adultCount, childCount, infantCount, totalPilgrims);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching pilgrim stats for trip {tripId}: {ex.Message}");
+            // If error, return zeros or fallback to total seats
+            return (selectedTrip?.TotalSeats ?? 0, 0, 0, 0);
+        }
     }
 
     private async Task OpenEditModal(TripAirlinePricing? existing = null)
@@ -782,6 +1027,10 @@
         if (existing != null)
         {
             selectedTrip = existing.Trip;
+
+            // Get current pilgrim stats to show alongside existing pricing
+            var pilgrimStats = await GetPilgrimStatsForTrip(existing.TripId);
+
             editModel = new TripAirlinePricing
             {
                 Id = existing.Id,
@@ -971,4 +1220,31 @@
             StateHasChanged();
         }
     }
+    // Helper method to get city code for display
+    private string GetCityCode(string cityName)
+    {
+        if (string.IsNullOrEmpty(cityName)) return "???";
+
+        // Return first 3 characters or known codes
+        return cityName switch
+        {
+            "الجزائر" => "ALG",
+            "قسنطينة" => "CZL",
+            "وهران" => "ORN",
+            "جدة" => "JED",
+            "المدينة المنورة" => "MED",
+            "مكة" => "MAK",
+            "الرياض" => "RUH",
+            "إسطنبول" => "IST",
+            "أنقرة" => "ANK",
+            "الدوحة" => "DOH",
+            "دبي" => "DXB",
+            "أبو ظبي" => "AUH",
+            "القاهرة" => "CAI",
+            "تونس" => "TUN",
+            "الدار البيضاء" => "CAS",
+            _ => cityName.Length >= 3 ? cityName[..3].ToUpper() : cityName.ToUpper()
+        };
+    }
+
 }

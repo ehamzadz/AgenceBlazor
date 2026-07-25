@@ -13,48 +13,14 @@ namespace AgenceBlazor.Services
             _context = context;
         }
 
-        //public async Task<bool> CreateAsync(AgencyBooking booking)
-        //{
-        //    try
-        //    {
-        //        _context.AgencyBookings.Add(booking);
-        //        await _context.SaveChangesAsync();
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error saving agency booking: {ex.Message}");
-        //        return false;
-        //    }
-        //}
-        //public async Task<bool> CreateAsync(AgencyBooking booking)
-        //{
-        //    try
-        //    {
-        //        // Algeria timezone (GMT+1)
-        //        var algeriaTime = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "W. Central Africa Standard Time");
-        //        booking.CreatedAt = algeriaTime;
-        //        booking.UpdatedAt = algeriaTime;
-        //        _context.AgencyBookings.Add(booking);
-        //        await _context.SaveChangesAsync();
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Error saving agency booking: {ex.Message}");
-        //        return false;
-        //    }
-        //}
         public async Task<bool> CreateAsync(AgencyBooking booking)
         {
             try
             {
-                //        // Algeria timezone (GMT+1)
-                        var algeriaTime = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "W. Central Africa Standard Time");
+                // Algeria timezone (GMT+1)
+                var algeriaTime = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "W. Central Africa Standard Time");
                 booking.CreatedAt = algeriaTime;
                 booking.UpdatedAt = algeriaTime;
-                //booking.CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
-                //booking.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
 
                 _context.AgencyBookings.Add(booking);
                 await _context.SaveChangesAsync();
@@ -76,6 +42,7 @@ namespace AgenceBlazor.Services
                 return false;
             }
         }
+
         public async Task<List<AgencyBooking>> GetAllAsync()
         {
             return await _context.AgencyBookings
@@ -83,6 +50,7 @@ namespace AgenceBlazor.Services
                 .OrderByDescending(b => b.CreatedAt)
                 .ToListAsync();
         }
+
         public async Task<bool> DeleteAsync(int id)
         {
             try
@@ -109,6 +77,23 @@ namespace AgenceBlazor.Services
             {
                 Console.WriteLine($"Error updating booking: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<List<AgencyBooking>> GetByTripIdAsync(int tripId)
+        {
+            try
+            {
+                return await _context.AgencyBookings
+                    .Include(b => b.Trip)
+                    .Where(b => b.TripId == tripId)
+                    .OrderByDescending(b => b.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching bookings for trip {tripId}: {ex.Message}");
+                return new();
             }
         }
     }

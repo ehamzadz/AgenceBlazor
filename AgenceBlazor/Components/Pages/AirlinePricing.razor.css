@@ -1045,3 +1045,1307 @@
         background: #f3f4f6;
         color: #374151;
     }
+
+/* Improved Trips without pricing section */
+.trips-without-pricing {
+    background: #fff;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    border-right: 4px solid #f59e0b;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+    .trips-without-pricing.collapsed {
+        border-right-color: #d1d5db;
+    }
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #fffbeb 0%, #fff 100%);
+}
+
+    .section-header:hover {
+        background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+    }
+
+.trips-without-pricing.collapsed .section-header {
+    background: linear-gradient(135deg, #f9fafb 0%, #fff 100%);
+}
+
+.section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.collapse-icon {
+    color: #92400e;
+    transition: transform 0.3s ease;
+}
+
+    .collapse-icon.rotated {
+        transform: rotate(-180deg);
+    }
+
+.section-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #374151;
+    font-weight: 700;
+}
+
+.count-badge {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid #fde68a;
+}
+
+.collapse-hint {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.trips-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem 1.25rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
+
+/* Improved Trip Item */
+.trip-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+    gap: 1rem;
+}
+
+    .trip-item:hover {
+        background: #f0f9ff;
+        border-color: #bae6fd;
+        transform: translateX(-4px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    }
+
+.trip-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.trip-item-number {
+    font-weight: 700;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    border: 1px solid #bfdbfe;
+}
+
+.trip-item-name {
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+}
+
+.trip-item-date {
+    color: #6b7280;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+    .trip-item-date::before {
+        content: '📅';
+        font-size: 0.75rem;
+    }
+
+.trip-item-seats {
+    color: #6b7280;
+    font-size: 0.8rem;
+    background: #f3f4f6;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.trip-item-airline {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.add-pricing-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);
+}
+
+    .add-pricing-btn:hover {
+        background: #15803d;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35);
+    }
+
+    .add-pricing-btn:active {
+        transform: translateY(0);
+    }
+
+/* Improved Pricing Cards */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 1.25rem;
+}
+
+.pricing-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s;
+    position: relative;
+}
+
+    .pricing-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+
+.card-accent {
+    height: 5px;
+    background: linear-gradient(90deg, #1e40af, #3b82f6, #60a5fa);
+}
+
+/* Payment Status Badge */
+.pricing-card::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #e5e7eb;
+}
+
+.pricing-card:has(.payment-status.paid)::after {
+    background: #16a34a;
+    box-shadow: 0 0 0 2px #bbf7d0;
+}
+
+.pricing-card:has(.payment-status.partial)::after {
+    background: #f59e0b;
+    box-shadow: 0 0 0 2px #fde68a;
+}
+
+.pricing-card:has(.payment-status.pending)::after {
+    background: #dc2626;
+    box-shadow: 0 0 0 2px #fecaca;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.trip-header {
+    text-align: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed #e5e7eb;
+}
+
+.trip-number {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 0.2rem 0.75rem;
+    border-radius: 20px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+.trip-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0.5rem 0 0.25rem;
+    color: #1a1a1a;
+    line-height: 1.4;
+}
+
+.trip-date {
+    font-size: 0.8rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+    .trip-date::before {
+        content: '📅';
+    }
+
+/* Route */
+.route-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #1e40af;
+    border: 1px solid #e2e8f0;
+}
+
+/* Passenger Items */
+.passenger-dist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.passenger-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.6rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #f3f4f6;
+    transition: all 0.2s;
+}
+
+    .passenger-item:hover {
+        background: #f0f9ff;
+        border-color: #bae6fd;
+    }
+
+    .passenger-item.free {
+        background: #fefce8;
+        border: 1px solid #fde68a;
+    }
+
+        .passenger-item.free:hover {
+            background: #fef9c3;
+        }
+
+.passenger-icon {
+    font-size: 1.1rem;
+    min-width: 24px;
+    text-align: center;
+}
+
+.passenger-label {
+    min-width: 55px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.passenger-count {
+    font-weight: 700;
+    color: #1e40af;
+    background: #eff6ff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    min-width: 28px;
+    text-align: center;
+}
+
+.passenger-price {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.passenger-total {
+    margin-right: auto;
+    font-weight: 700;
+    color: #16a34a;
+    font-size: 0.85rem;
+}
+
+/* Grand Total */
+.totals-section {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-radius: 12px;
+    padding: 0.85rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    font-size: 0.85rem;
+}
+
+    .total-row.grand-total {
+        border-top: 2px solid #e5e7eb;
+        padding-top: 0.6rem;
+        margin-top: 0.4rem;
+    }
+
+.grand-amount {
+    color: #1e40af;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+/* Payment Progress */
+.payment-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    .progress-fill.complete {
+        background: linear-gradient(90deg, #16a34a, #4ade80);
+    }
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    min-width: 38px;
+    text-align: center;
+}
+
+/* Card Actions */
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 0.6rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+    .action-btn::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,0);
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover::after {
+        background: rgba(255,255,255,0.1);
+    }
+
+    .action-btn:active {
+        transform: scale(0.97);
+    }
+
+.edit-btn {
+    background: #eff6ff;
+    color: #3b82f6;
+    border: 1px solid #bfdbfe;
+}
+
+    .edit-btn:hover {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+
+.pay-btn {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+    .pay-btn:hover:not(:disabled) {
+        background: #f59e0b;
+        color: white;
+        border-color: #f59e0b;
+    }
+
+    .pay-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f0fdf4;
+        color: #16a34a;
+        border-color: #bbf7d0;
+    }
+
+.delete-btn {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+    .delete-btn:hover {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+    }
+
+/* ============ IMPROVED PRICING CARDS ============ */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+    gap: 1.5rem;
+}
+
+.pricing-card {
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+    .pricing-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    }
+
+    /* Status Ribbon */
+    .pricing-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        z-index: 1;
+    }
+
+    .pricing-card.paid::before {
+        background: linear-gradient(90deg, #16a34a, #4ade80, #16a34a);
+        background-size: 200% 100%;
+        animation: gradientShift 3s ease infinite;
+    }
+
+    .pricing-card.partial::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+        background-size: 200% 100%;
+        animation: gradientShift 3s ease infinite;
+    }
+
+    .pricing-card.unpaid::before {
+        background: linear-gradient(90deg, #dc2626, #f87171, #dc2626);
+        background-size: 200% 100%;
+        animation: gradientShift 3s ease infinite;
+    }
+
+@keyframes gradientShift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Status Ribbon */
+.status-ribbon {
+    position: absolute;
+    top: 16px;
+    left: -32px;
+    transform: rotate(-45deg);
+    padding: 0.4rem 3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    letter-spacing: 0.5px;
+    text-align: center;
+    width: 200px;
+}
+
+    .status-ribbon.paid {
+        background: #16a34a;
+        color: #fff;
+    }
+
+    .status-ribbon.partial {
+        background: #f59e0b;
+        color: #fff;
+    }
+
+    .status-ribbon.unpaid {
+        background: #dc2626;
+        color: #fff;
+    }
+
+.card-body {
+    padding: 1.75rem;
+    padding-top: 2rem;
+}
+
+/* Trip Header */
+.trip-header {
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+.trip-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.trip-number {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    border: 1px solid #bfdbfe;
+}
+
+.trip-airline-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.trip-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.trip-date {
+    font-size: 0.82rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-weight: 500;
+}
+
+/* Route Section */
+.route-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-radius: 14px;
+    margin-bottom: 1.25rem;
+    border: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.route-city {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    min-width: 70px;
+}
+
+.city-code {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #3b82f6;
+    letter-spacing: 1px;
+}
+
+.city-name {
+    font-size: 0.72rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.route-line-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.route-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #3b82f6;
+    z-index: 1;
+}
+
+    .route-dot.end {
+        background: #16a34a;
+        box-shadow: 0 0 0 2px #16a34a;
+    }
+
+.route-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #93c5fd, #16a34a);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.plane-icon {
+    color: #3b82f6;
+    animation: flyPlane 2s ease-in-out infinite;
+}
+
+@keyframes flyPlane {
+    0%, 100% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+}
+
+/* Passenger Cards */
+.passenger-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.passenger-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+    .passenger-card:hover {
+        background: #f0f9ff;
+        border-color: #bae6fd;
+        transform: translateX(-4px);
+        box-shadow: 0 4px 12px rgba(59,130,246,0.08);
+    }
+
+    .passenger-card.child {
+        border-left: 3px solid #f59e0b;
+    }
+
+    .passenger-card.infant {
+        border-left: 3px solid #ec4899;
+    }
+
+    .passenger-card.free {
+        background: #fefce8;
+        border: 1px solid #fde68a;
+        border-left: 3px solid #eab308;
+    }
+
+.passenger-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.passenger-emoji {
+    font-size: 1.2rem;
+}
+
+.passenger-type {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.85rem;
+    flex: 1;
+}
+
+.passenger-badge {
+    font-weight: 700;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 0.2rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.passenger-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price-breakdown {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.price-total {
+    font-weight: 700;
+    color: #16a34a;
+    font-size: 0.9rem;
+}
+
+    .price-total small {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-right: 0.2rem;
+    }
+
+/* Stats Row */
+.stats-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stat-badge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    background: #f9fafb;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
+
+    .stat-badge svg {
+        color: #3b82f6;
+    }
+
+    .stat-badge.seats {
+        justify-content: center;
+    }
+
+/* Grand Total */
+.grand-total-section {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(30,64,175,0.3);
+}
+
+.total-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.total-amount {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+    .total-amount small {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        margin-right: 0.2rem;
+    }
+
+/* Payment Section */
+.payment-section {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 0.85rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e2e8f0;
+}
+
+.payment-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.payment-label {
+    font-size: 0.78rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.payment-value {
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+    .payment-value.paid {
+        color: #16a34a;
+    }
+
+    .payment-value.remaining {
+        color: #dc2626;
+    }
+
+.payment-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 5px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    .progress-fill.complete {
+        background: linear-gradient(90deg, #16a34a, #4ade80);
+    }
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.progress-percent {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #374151;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Notes Bubble */
+.notes-bubble {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    background: #fefce8;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    font-size: 0.78rem;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+    .notes-bubble svg {
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+
+/* Card Actions */
+.card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.6rem;
+}
+
+.action-btn {
+    padding: 0.65rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+    .action-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,0);
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover::before {
+        background: rgba(0,0,0,0.05);
+    }
+
+    .action-btn:active {
+        transform: scale(0.95);
+    }
+
+    .action-btn.edit {
+        background: #eff6ff;
+        color: #3b82f6;
+        border: 1px solid #bfdbfe;
+    }
+
+        .action-btn.edit:hover {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+        }
+
+    .action-btn.pay {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+        .action-btn.pay:hover:not(:disabled) {
+            background: #f59e0b;
+            color: #fff;
+            border-color: #f59e0b;
+            box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+        }
+
+        .action-btn.pay.done {
+            background: #f0fdf4;
+            color: #16a34a;
+            border-color: #bbf7d0;
+            cursor: default;
+        }
+
+        .action-btn.pay:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+    .action-btn.delete {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+        .action-btn.delete:hover {
+            background: #dc2626;
+            color: #fff;
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+        }
+
+/* Current Counts Info */
+.current-counts-info {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+    .current-counts-info h4 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.9rem;
+        color: #0369a1;
+    }
+
+.counts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.count-item {
+    text-align: center;
+    background: #fff;
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: 1px solid #e0f2fe;
+}
+
+    .count-item.total {
+        background: #dbeafe;
+        border-color: #93c5fd;
+    }
+
+.count-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+}
+
+.count-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #1e40af;
+}
+
+.count-item.total .count-value {
+    color: #1e3a8a;
+}
+
+.counts-note {
+    text-align: center;
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.header-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 160px;
+    transition: all 0.3s ease;
+}
+
+    .stat-item:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    flex-shrink: 0;
+}
+
+    .stat-icon.total {
+        background: rgba(59, 130, 246, 0.3);
+    }
+
+    .stat-icon.paid {
+        background: rgba(34, 197, 94, 0.3);
+    }
+
+    .stat-icon.unpaid {
+        background: rgba(239, 68, 68, 0.3);
+    }
+
+    .stat-icon.passengers {
+        background: rgba(168, 85, 247, 0.3);
+    }
+
+    .stat-icon.payment-rate {
+        background: rgba(251, 146, 60, 0.3);
+    }
+
+    .stat-icon.trips {
+        background: rgba(6, 182, 212, 0.3);
+    }
+
+    .stat-icon.airlines-count {
+        background: rgba(236, 72, 153, 0.3);
+    }
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .header-stats {
+        justify-content: flex-start;
+    }
+
+    .stat-item {
+        min-width: 140px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-stats {
+        gap: 8px;
+    }
+
+    .stat-item {
+        min-width: calc(50% - 8px);
+        padding: 8px 10px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+    }
+}

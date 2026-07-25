@@ -55,6 +55,11 @@ builder.Services.AddScoped<ITripGuideService, TripGuideService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TripAirlinePricingService>();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5121);
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

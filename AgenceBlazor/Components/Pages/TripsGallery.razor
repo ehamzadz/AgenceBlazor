@@ -1914,7 +1914,7 @@
                 showAgencyBookingModal = false;
                 agencyBookingTrip = null;
 
-                await Task.Delay(300); // Wait for DB trigger to complete
+                await Task.Delay(600); // Wait for DB trigger to complete
                 await LoadTripsAsync(); // Reload from DB
                 StateHasChanged();
             }
